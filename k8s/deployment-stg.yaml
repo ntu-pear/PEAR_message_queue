@@ -1,0 +1,182 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rabbitmq-stg
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: default
+  name: rabbitmq-stg
+rules:
+- apiGroups: [""]
+  resources: ["endpoints"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: rabbitmq-stg
+  namespace: default
+subjects:
+- kind: ServiceAccount
+  name: rabbitmq-stg
+  namespace: default
+roleRef:
+  kind: Role
+  name: rabbitmq-stg
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-config-stg
+data:
+  enabled_plugins: |
+    [rabbitmq_management,rabbitmq_peer_discovery_k8s].
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rabbitmq-secret-stg
+type: Opaque
+data:
+  # admin:pear2025 (base64 encoded)
+  RABBITMQ_DEFAULT_USER: YWRtaW4=
+  RABBITMQ_DEFAULT_PASS: cGVhcjIwMjU=
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-headless-stg
+spec:
+  clusterIP: None
+  ports:
+  - name: amqp
+    port: 5672
+    targetPort: 5672
+  - name: management
+    port: 15672
+    targetPort: 15672
+  selector:
+    app: rabbitmq-stg
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-service-stg
+spec:
+  type: NodePort
+  ports:
+  - name: amqp
+    port: 5672
+    targetPort: 5672
+    nodePort: 30672
+  - name: management
+    port: 15672
+    targetPort: 15672
+    nodePort: 31672
+  selector:
+    app: rabbitmq-stg
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rabbitmq-stg
+spec:
+  serviceName: rabbitmq-headless-stg
+  replicas: 3
+  selector:
+    matchLabels:
+      app: rabbitmq-stg
+  template:
+    metadata:
+      labels:
+        app: rabbitmq-stg
+    spec:
+      serviceAccountName: rabbitmq-stg
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: rabbitmq
+        image: host.minikube.internal:5000/rabbitmq_service_dev:latest
+        imagePullPolicy: Always
+        ports:
+        - name: amqp
+          containerPort: 5672
+        - name: management
+          containerPort: 15672
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-secret-stg
+              key: RABBITMQ_DEFAULT_USER
+        - name: RABBITMQ_DEFAULT_PASS
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-secret-stg
+              key: RABBITMQ_DEFAULT_PASS
+        - name: RABBITMQ_DEFAULT_VHOST
+          value: "/"
+        - name: RABBITMQ_ERLANG_COOKIE
+          value: "pear-rabbitmq-cookie-staging"
+        - name: MY_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: MY_POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: RABBITMQ_USE_LONGNAME
+          value: "true"
+        - name: RABBITMQ_NODENAME
+          value: "rabbit@$(MY_POD_NAME).rabbitmq-headless-stg.$(MY_POD_NAMESPACE).svc.cluster.local"
+        - name: K8S_SERVICE_NAME
+          value: "rabbitmq-headless-stg"
+        - name: K8S_HOSTNAME_SUFFIX
+          value: ".rabbitmq-headless-stg.$(MY_POD_NAMESPACE).svc.cluster.local"
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/rabbitmq/enabled_plugins
+          subPath: enabled_plugins
+        - name: rabbitmq-data
+          mountPath: /var/lib/rabbitmq
+        livenessProbe:
+          exec:
+            command: ["rabbitmq-diagnostics", "status"]
+          initialDelaySeconds: 60
+          periodSeconds: 60
+          timeoutSeconds: 15
+        readinessProbe:
+          exec:
+            command: ["rabbitmq-diagnostics", "ping"]
+          initialDelaySeconds: 20
+          periodSeconds: 60
+          timeoutSeconds: 10
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+      volumes:
+      - name: config-volume
+        configMap:
+          name: rabbitmq-config-stg
+          items:
+          - key: enabled_plugins
+            path: enabled_plugins
+  volumeClaimTemplates:
+  - metadata:
+      name: rabbitmq-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 5Gi

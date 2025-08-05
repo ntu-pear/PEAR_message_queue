@@ -1,0 +1,406 @@
+{
+  "rabbit_version": "4.1.1",
+  "rabbitmq_version": "4.1.1",
+  "product_name": "RabbitMQ",
+  "product_version": "4.1.1",
+  "users": [
+    { "name": "admin", "password": "pear2025", "tags": "administrator" }
+  ],
+  "vhosts": [{ "name": "vhost" }],
+  "permissions": [
+    {
+      "user": "admin",
+      "vhost": "vhost",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
+  "topic_permissions": [],
+  "parameters": [],
+  "global_parameters": [
+    {
+      "name": "internal_cluster_id",
+      "value": "rabbitmq-cluster-id-pear-staging"
+    }
+  ],
+  "policies": [],
+  "exchanges": [
+    {
+      "name": "patient.updates",
+      "vhost": "vhost",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "activity.updates",
+      "vhost": "vhost",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "schedule.updates",
+      "vhost": "vhost",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "system.dlx",
+      "vhost": "vhost",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "patient.created",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.patient",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "patient.updated",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.patient",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "patient.deleted",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.patient",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "activity.centre_activity.created",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.activity.centre_activity",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "activity.centre_activity.updated",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.activity.centre_activity",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "activity.centre_activity.deleted",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.activity.centre_activity",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "activity.preferences.changed",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.activity.preferences",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "activity.recommendations.changed",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.activity.recommendations",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "activity.exclusions.changed",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.activity.exclusions",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "schedule.generated",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.schedule.generated",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "schedule.updated",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.schedule.updated",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "dlq.patient",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "dlq.activity.centre_activity",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "dlq.activity.preferences",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "dlq.activity.recommendations",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "dlq.activity.exclusions",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "dlq.schedule.generated",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "dlq.schedule.updated",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    }
+  ],
+  "bindings": [
+    {
+      "source": "patient.updates",
+      "vhost": "vhost",
+      "destination": "patient.created",
+      "destination_type": "queue",
+      "routing_key": "patient.created.*",
+      "arguments": {}
+    },
+    {
+      "source": "patient.updates",
+      "vhost": "vhost",
+      "destination": "patient.updated",
+      "destination_type": "queue",
+      "routing_key": "patient.updated.*",
+      "arguments": {}
+    },
+    {
+      "source": "patient.updates",
+      "vhost": "vhost",
+      "destination": "patient.deleted",
+      "destination_type": "queue",
+      "routing_key": "patient.deleted.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.centre_activity.created",
+      "destination_type": "queue",
+      "routing_key": "activity.centre_activity.created.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.centre_activity.updated",
+      "destination_type": "queue",
+      "routing_key": "activity.centre_activity.updated.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.centre_activity.deleted",
+      "destination_type": "queue",
+      "routing_key": "activity.centre_activity.deleted.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.preferences.changed",
+      "destination_type": "queue",
+      "routing_key": "activity.preferences.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.recommendations.changed",
+      "destination_type": "queue",
+      "routing_key": "activity.recommendations.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.exclusions.changed",
+      "destination_type": "queue",
+      "routing_key": "activity.exclusions.*",
+      "arguments": {}
+    },
+    {
+      "source": "schedule.updates",
+      "vhost": "vhost",
+      "destination": "schedule.generated",
+      "destination_type": "queue",
+      "routing_key": "schedule.generated.*",
+      "arguments": {}
+    },
+    {
+      "source": "schedule.updates",
+      "vhost": "vhost",
+      "destination": "schedule.updated",
+      "destination_type": "queue",
+      "routing_key": "schedule.updated.*",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost",
+      "destination": "dlq.patient",
+      "destination_type": "queue",
+      "routing_key": "failed.patient",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost",
+      "destination": "dlq.activity.centre_activity",
+      "destination_type": "queue",
+      "routing_key": "failed.activity.centre_activity",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost",
+      "destination": "dlq.activity.preferences",
+      "destination_type": "queue",
+      "routing_key": "failed.activity.preferences",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost",
+      "destination": "dlq.activity.recommendations",
+      "destination_type": "queue",
+      "routing_key": "failed.activity.recommendations",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost",
+      "destination": "dlq.activity.exclusions",
+      "destination_type": "queue",
+      "routing_key": "failed.activity.exclusions",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost",
+      "destination": "dlq.schedule.generated",
+      "destination_type": "queue",
+      "routing_key": "failed.schedule.generated",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost",
+      "destination": "dlq.schedule.updated",
+      "destination_type": "queue",
+      "routing_key": "failed.schedule.updated",
+      "arguments": {}
+    }
+  ]
+}
