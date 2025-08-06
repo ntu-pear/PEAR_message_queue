@@ -121,7 +121,7 @@ spec:
               name: rabbitmq-secret-stg
               key: RABBITMQ_DEFAULT_PASS
         - name: RABBITMQ_DEFAULT_VHOST
-          value: "/"
+          value: "vhost"
         - name: RABBITMQ_ERLANG_COOKIE
           value: "pear-rabbitmq-cookie-staging"
         - name: MY_POD_NAME

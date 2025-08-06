@@ -5,11 +5,6 @@ LABEL maintainer="PEAR Team"
 LABEL description="RabbitMQ Message Broker for PEAR System"
 LABEL version="1.0.0"
 
-# Set environment variables
-ENV RABBITMQ_DEFAULT_USER=admin
-ENV RABBITMQ_DEFAULT_PASS=pear2025
-ENV RABBITMQ_DEFAULT_VHOST=/
-
 # Copy configuration files
 COPY rabbitmq.conf /etc/rabbitmq/rabbitmq.conf
 COPY definitions.yaml /etc/rabbitmq/definitions.json

@@ -3,9 +3,7 @@
   "rabbitmq_version": "4.1.1",
   "product_name": "RabbitMQ",
   "product_version": "4.1.1",
-  "users": [
-    { "name": "admin", "password": "pear2025", "tags": "administrator" }
-  ],
+  "users": [],
   "vhosts": [{ "name": "vhost" }],
   "permissions": [
     {
