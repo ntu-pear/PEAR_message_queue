@@ -49,7 +49,7 @@ jobs:
             }'
             
             # Update the image
-            kubectl set image statefulset/rabbitmq-stg rabbitmq=localhost:5000/rabbitmq_service_dev:latest
+            kubectl set image statefulset/rabbitmq-stg rabbitmq=host.minikube.internal:5000/rabbitmq_service_dev:latest
             
             echo "Rolling update initiated - pods will restart one by one"
             
