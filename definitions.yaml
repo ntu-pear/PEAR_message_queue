@@ -3,7 +3,13 @@
   "rabbitmq_version": "4.1.1",
   "product_name": "RabbitMQ",
   "product_version": "4.1.1",
-  "users": [],
+  "users": [
+    {
+      "name": "admin",
+      "password_hash": "g5vJPeNfGqRGAi+s4C2x25Bydqxv84gbbWXmInMuKIs7shQP",
+      "tags": ["administrator"]
+    }
+  ],
   "vhosts": [{ "name": "vhost" }],
   "permissions": [
     {

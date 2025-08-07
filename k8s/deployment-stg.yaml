@@ -40,16 +40,6 @@ data:
     [rabbitmq_management,rabbitmq_peer_discovery_k8s].
 ---
 apiVersion: v1
-kind: Secret
-metadata:
-  name: rabbitmq-secret-stg
-type: Opaque
-data:
-  # admin:pear2025 (base64 encoded)
-  RABBITMQ_DEFAULT_USER: YWRtaW4=
-  RABBITMQ_DEFAULT_PASS: cGVhcjIwMjU=
----
-apiVersion: v1
 kind: Service
 metadata:
   name: rabbitmq-headless-stg
@@ -110,18 +100,6 @@ spec:
         - name: management
           containerPort: 15672
         env:
-        - name: RABBITMQ_DEFAULT_USER
-          valueFrom:
-            secretKeyRef:
-              name: rabbitmq-secret-stg
-              key: RABBITMQ_DEFAULT_USER
-        - name: RABBITMQ_DEFAULT_PASS
-          valueFrom:
-            secretKeyRef:
-              name: rabbitmq-secret-stg
-              key: RABBITMQ_DEFAULT_PASS
-        - name: RABBITMQ_DEFAULT_VHOST
-          value: "vhost"
         - name: RABBITMQ_ERLANG_COOKIE
           value: "pear-rabbitmq-cookie-staging"
         - name: MY_POD_NAME
