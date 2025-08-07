@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository contains the RabbitMQ configuration and deployment files.
+This repository contains the RabbitMQ configuration and deployment files configured with rolling updates.
 
 - **RabbitMQ Version**: 4.1.1 with management plugin
 - **Cluster Size**: 3 nodes for high availability
@@ -121,8 +121,6 @@ kubectl scale statefulset rabbitmq-stg --replicas=5
 - `k8s/deployment-stg.yaml` - Kubernetes manifests
 
 ### Environment Variables
-- `RABBITMQ_DEFAULT_USER`   - Admin username
-- `RABBITMQ_DEFAULT_PASS`   - Admin password  
 - `RABBITMQ_ERLANG_COOKIE`  - Cluster authentication
 - `RABBITMQ_NODENAME`       - Node identifier
 - `RABBITMQ_VIRTUAL_HOST`   - VHost identifier
