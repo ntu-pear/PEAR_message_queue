@@ -34,6 +34,9 @@ jobs:
       - name: Rolling update instead of recreation
         run: |
           echo "🔄 Performing rolling update of RabbitMQ..."
+
+          MINIKUBE_IP=$(minikube ip)
+          echo "Minikube IP: $MINIKUBE_IP"
           
           if kubectl get statefulset rabbitmq-stg &> /dev/null; then
             echo "Existing RabbitMQ found - performing rolling update"
@@ -49,7 +52,7 @@ jobs:
             }'
             
             # Update the image
-            kubectl set image statefulset/rabbitmq-stg localhost:5000/rabbitmq_service_dev:latest
+            kubectl set image statefulset/rabbitmq-stg rabbitmq=$MINIKUBE_IP:5000/rabbitmq_service_dev:latest
             
             echo "Rolling update initiated - pods will restart one by one"
             
