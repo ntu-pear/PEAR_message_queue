@@ -1,0 +1,86 @@
+# This workflow will build and deploy RabbitMQ message queue service
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: RabbitMQ Message Queue CD
+
+on:
+  push:
+    branches: ["main", "staging"]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-staging:
+    if: github.ref == 'refs/heads/main' # to create a separate job for production in future
+    runs-on: [self-hosted, Linux, X64, rabbitmq_staging]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Print working directory
+        run: |
+          pwd
+          ls -la
+          git status
+          echo "Deploying to STAGING environment"
+      
+      - name: Verify definitions.yaml exists
+        run: |
+          if [ -f "definitions.yaml" ]; then
+            echo "definitions.yaml found"
+            cat definitions.yaml | head -20
+          else
+            echo "ERROR: definitions.yaml not found"
+            exit 1
+          fi
+      
+      - name: Delete old RabbitMQ deployment
+        run: |
+          echo "Deleting old RabbitMQ staging deployment..."
+          kubectl delete statefulset rabbitmq-stg --ignore-not-found
+          kubectl delete service rabbitmq-service-stg rabbitmq-headless-stg --ignore-not-found
+          kubectl delete configmap rabbitmq-config-stg --ignore-not-found
+          kubectl delete secret rabbitmq-secret-stg --ignore-not-found
+          kubectl delete serviceaccount rabbitmq-stg --ignore-not-found
+          kubectl delete role rabbitmq-stg --ignore-not-found
+          kubectl delete rolebinding rabbitmq-stg --ignore-not-found
+      
+      - name: Delete old Docker images
+        run: |
+          echo "Cleaning up old Docker images..."
+          docker rmi rabbitmq_service_dev --force || true
+          docker rmi localhost:5000/rabbitmq_service_dev --force || true
+      
+      - name: Build RabbitMQ Docker image
+        run: |
+          echo "Building RabbitMQ Docker image..."
+          docker build --no-cache -f Dockerfile -t rabbitmq_service_dev .
+      
+      - name: Tag Docker image for registry
+        run: |
+          echo "Tagging Docker image..."
+          docker tag rabbitmq_service_dev:latest localhost:5000/rabbitmq_service_dev:latest
+      
+      - name: Push Docker image to registry
+        run: |
+          echo "Pushing Docker image to registry..."
+          docker push localhost:5000/rabbitmq_service_dev:latest
+      
+      - name: Deploy RabbitMQ to Kubernetes
+        run: |
+          echo "Deploying RabbitMQ to Kubernetes staging..."
+          kubectl apply -f './k8s/deployment-stg.yaml'
+      
+      - name: Wait for RabbitMQ pods to be ready
+        run: |
+          echo "Waiting for RabbitMQ pods to be ready..."
+          kubectl wait --for=condition=ready pod -l app=rabbitmq-stg --timeout=300s
+      
+      - name: Verify RabbitMQ deployment
+        run: |
+          echo "Verifying RabbitMQ deployment..."
+          kubectl get pods -l app=rabbitmq-stg
+          kubectl get services -l app=rabbitmq-stg
+          echo "RabbitMQ staging deployment completed successfully!"
+
