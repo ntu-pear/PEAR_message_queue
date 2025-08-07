@@ -27,8 +27,8 @@ jobs:
         run: |
           echo "🔨 Building new RabbitMQ image..."
           docker build --no-cache -f Dockerfile -t rabbitmq_service_dev .
-          docker tag rabbitmq_service_dev:latest host.minikube.internal:5000/rabbitmq_service_dev:latest
-          docker push host.minikube.internal:5000/rabbitmq_service_dev:latest
+          docker tag rabbitmq_service_dev:latest localhost:5000/rabbitmq_service_dev:latest
+          docker push localhost:5000/rabbitmq_service_dev:latest
           sleep 5
       
       - name: Rolling update instead of recreation
