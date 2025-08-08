@@ -29,7 +29,7 @@ jobs:
         run: |
           echo "🔨 Building new RabbitMQ image..."
           docker build --no-cache -f Dockerfile -t rabbitmq_service_dev .
-          docker tag rabbitmq_service_dev:${TAG} localhost:5000/rabbitmq_service_dev:latest
+          docker tag rabbitmq_service_dev:latest localhost:5000/rabbitmq_service_dev:latest
           docker push localhost:5000/rabbitmq_service_dev:latest
           sleep 5
       
