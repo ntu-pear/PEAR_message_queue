@@ -183,14 +183,6 @@
       "destination_type": "queue",
       "routing_key": "failed.scheduler.patient",
       "arguments": {}
-    },
-        {
-      "source": "system.dlx",
-      "vhost": "vhost", 
-      "destination": "dlq.scheduler.test",
-      "destination_type": "queue",
-      "routing_key": "failed.scheduler.test",
-      "arguments": {}
     }
   ]
 }
