@@ -308,7 +308,6 @@
     }
   ],
   "bindings": [
-    # Scheduler Service Bindings
     {
       "source": "patient.updates",
       "vhost": "vhost",
