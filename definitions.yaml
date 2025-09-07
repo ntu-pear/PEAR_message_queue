@@ -129,6 +129,84 @@
       }
     },
     {
+      "name": "patient.prescription.created",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.patient.prescription",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "patient.prescription.updated",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.patient.prescription",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "patient.prescription.deleted",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.patient.prescription",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "scheduler.patient.prescription.created",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.patient.prescription",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "scheduler.patient.prescription.updated",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.patient.prescription",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "scheduler.patient.prescription.deleted",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.patient.prescription",
+        "x-delivery-limit": 3
+      }
+    },
+    {
       "name": "dlq.patient",
       "vhost": "vhost",
       "durable": true,
@@ -166,6 +244,30 @@
       "destination": "scheduler.patient.deleted",
       "destination_type": "queue",
       "routing_key": "patient.deleted.*",
+      "arguments": {}
+    },
+    {
+      "source": "patient.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.patient.prescription.created",
+      "destination_type": "queue",
+      "routing_key": "patient.prescription.created.*",
+      "arguments": {}
+    },
+    {
+      "source": "patient.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.patient.prescription.updated",
+      "destination_type": "queue",
+      "routing_key": "patient.prescription.updated.*",
+      "arguments": {}
+    },
+    {
+      "source": "patient.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.patient.prescription.deleted",
+      "destination_type": "queue",
+      "routing_key": "patient.prescription.deleted.*",
       "arguments": {}
     },
     {

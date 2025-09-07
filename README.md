@@ -69,6 +69,11 @@ All queues are configured as quorum queues with:
 - `patient.updated` 
 - `patient.deleted`
 
+#### Patient Prescription Queues
+- `patient.prescription.created`
+- `patient.prescription.updated`
+- `patient.prescription.deleted`
+
 #### TODO: Activity Queues
 - `activity.centre_activity.created`
 - `activity.centre_activity.updated`
