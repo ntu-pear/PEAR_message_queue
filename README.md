@@ -81,11 +81,10 @@ All queues are configured as quorum queues with:
 
 ### Centre Activity Queues (Quorom)
 - `activity.centre_activity.created`
-
-
-#### TODO: Activity Queues
 - `activity.centre_activity.updated`
 - `activity.centre_activity.deleted`
+
+#### TODO: Activity Queues
 - `activity.preferences.changed`
 - `activity.recommendations.changed`
 - `activity.exclusions.changed`
