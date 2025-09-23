@@ -70,9 +70,9 @@ All queues are configured as quorum queues with:
 - `patient.deleted`
 
 #### Patient Prescription Queues (Quorom)
-- `patient.prescription.created`
-- `patient.prescription.updated`
-- `patient.prescription.deleted`
+- `patient.medication.created`
+- `patient.medication.updated`
+- `patient.medication.deleted`
 
 ### Activity Queues (Quorom)
 - `activity.created`
@@ -84,10 +84,20 @@ All queues are configured as quorum queues with:
 - `activity.centre_activity.updated`
 - `activity.centre_activity.deleted`
 
-#### TODO: Activity Queues
-- `activity.preferences.changed`
-- `activity.recommendations.changed`
-- `activity.exclusions.changed`
+### Routine (Quorom)
+- `activity.routine.created`
+- `activity.routine.updated`
+- `activity.routine.deleted`
+
+### Preference (Quorom)
+- `activity.preference.created`
+- `activity.preference.updated`
+- `activity.preference.deleted`
+
+### Recommendation (Quorom)
+- `activity.recommendation.created`
+- `activity.recommendation.updated`
+- `activity.recommendation.deleted`
 
 #### Dead Letter Queues (DLQ using classic queues)
 - `dlq.patient`
