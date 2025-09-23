@@ -138,7 +138,7 @@
       }
     },
     {
-      "name": "patient.prescription.created",
+      "name": "patient.medication.created",
       "vhost": "vhost",
       "durable": true,
       "auto_delete": false,
@@ -146,12 +146,12 @@
         "x-queue-type": "quorum",
         "x-message-ttl": 300000,
         "x-dead-letter-exchange": "system.dlx",
-        "x-dead-letter-routing-key": "failed.patient.prescription",
+        "x-dead-letter-routing-key": "failed.patient.medication",
         "x-delivery-limit": 3
       }
     },
     {
-      "name": "patient.prescription.updated",
+      "name": "patient.medication.updated",
       "vhost": "vhost",
       "durable": true,
       "auto_delete": false,
@@ -159,12 +159,12 @@
         "x-queue-type": "quorum",
         "x-message-ttl": 300000,
         "x-dead-letter-exchange": "system.dlx",
-        "x-dead-letter-routing-key": "failed.patient.prescription",
+        "x-dead-letter-routing-key": "failed.patient.medication",
         "x-delivery-limit": 3
       }
     },
     {
-      "name": "patient.prescription.deleted",
+      "name": "patient.medication.deleted",
       "vhost": "vhost",
       "durable": true,
       "auto_delete": false,
@@ -172,12 +172,12 @@
         "x-queue-type": "quorum",
         "x-message-ttl": 300000,
         "x-dead-letter-exchange": "system.dlx",
-        "x-dead-letter-routing-key": "failed.patient.prescription",
+        "x-dead-letter-routing-key": "failed.patient.medication",
         "x-delivery-limit": 3
       }
     },
     {
-      "name": "scheduler.patient.prescription.created",
+      "name": "scheduler.patient.medication.created",
       "vhost": "vhost",
       "durable": true,
       "auto_delete": false,
@@ -185,12 +185,12 @@
         "x-queue-type": "quorum",
         "x-message-ttl": 300000,
         "x-dead-letter-exchange": "system.dlx",
-        "x-dead-letter-routing-key": "failed.scheduler.patient.prescription",
+        "x-dead-letter-routing-key": "failed.scheduler.patient.medication",
         "x-delivery-limit": 3
       }
     },
     {
-      "name": "scheduler.patient.prescription.updated",
+      "name": "scheduler.patient.medication.updated",
       "vhost": "vhost",
       "durable": true,
       "auto_delete": false,
@@ -198,12 +198,12 @@
         "x-queue-type": "quorum",
         "x-message-ttl": 300000,
         "x-dead-letter-exchange": "system.dlx",
-        "x-dead-letter-routing-key": "failed.scheduler.patient.prescription",
+        "x-dead-letter-routing-key": "failed.scheduler.patient.medication",
         "x-delivery-limit": 3
       }
     },
     {
-      "name": "scheduler.patient.prescription.deleted",
+      "name": "scheduler.patient.medication.deleted",
       "vhost": "vhost",
       "durable": true,
       "auto_delete": false,
@@ -211,7 +211,7 @@
         "x-queue-type": "quorum",
         "x-message-ttl": 300000,
         "x-dead-letter-exchange": "system.dlx",
-        "x-dead-letter-routing-key": "failed.scheduler.patient.prescription",
+        "x-dead-letter-routing-key": "failed.scheduler.patient.medication",
         "x-delivery-limit": 3
       }
     },
@@ -254,7 +254,7 @@
         "x-delivery-limit": 3
       }
     },
-        {
+    {
       "name": "scheduler.activity.created",
       "vhost": "vhost",
       "durable": true,
@@ -332,7 +332,7 @@
         "x-delivery-limit": 3
       }
     },
-        {
+    {
       "name": "scheduler.activity.centre_activity.created",
       "vhost": "vhost",
       "durable": true,
@@ -410,7 +410,7 @@
         "x-delivery-limit": 3
       }
     },
-        {
+    {
       "name": "scheduler.activity.centre_activity_exclusion.created",
       "vhost": "vhost",
       "durable": true,
@@ -448,6 +448,254 @@
         "x-dead-letter-routing-key": "failed.scheduler.activity.centre_activity_exclusion",
         "x-delivery-limit": 3
       }
+    },
+    {
+      "name": "activity.routine.created",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.activity.routine",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "activity.routine.updated",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.activity.routine",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "activity.routine.deleted",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.activity.routine",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "scheduler.activity.routine.created",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.activity.routine",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "scheduler.activity.routine.updated",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.activity.routine",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "scheduler.activity.routine.deleted",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.activity.routine",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "activity.preference.created",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.activity.preference",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "activity.preference.updated",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.activity.preference",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "activity.preference.deleted",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.activity.preference",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "scheduler.activity.preference.created",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.activity.preference",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "scheduler.activity.preference.updated",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.activity.preference",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "scheduler.activity.preference.deleted",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.activity.preference",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "activity.recommendation.created",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.activity.recommendation",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "activity.recommendation.updated",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.activity.recommendation",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "activity.recommendation.deleted",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.activity.recommendation",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "scheduler.activity.recommendation.created",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.activity.recommendation",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "scheduler.activity.recommendation.updated",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.activity.recommendation",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "scheduler.activity.recommendation.deleted",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.activity.recommendation",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "dlq.patient.medication",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "dlq.scheduler.patient.medication",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
     },
     {
       "name": "dlq.patient",
@@ -504,9 +752,243 @@
       "durable": true,
       "auto_delete": false,
       "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "dlq.activity.routine",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "dlq.scheduler.activity.routine",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "dlq.activity.preference",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "dlq.scheduler.activity.preference",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "dlq.activity.recommendation",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "dlq.scheduler.activity.recommendation",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
     }
   ],
   "bindings": [
+    {
+      "source": "patient.updates",
+      "vhost": "vhost",
+      "destination": "patient.created",
+      "destination_type": "queue",
+      "routing_key": "patient.created.*",
+      "arguments": {}
+    },
+    {
+      "source": "patient.updates",
+      "vhost": "vhost",
+      "destination": "patient.updated",
+      "destination_type": "queue",
+      "routing_key": "patient.updated.*",
+      "arguments": {}
+    },
+    {
+      "source": "patient.updates",
+      "vhost": "vhost",
+      "destination": "patient.deleted",
+      "destination_type": "queue",
+      "routing_key": "patient.deleted.*",
+      "arguments": {}
+    },
+    {
+      "source": "patient.updates",
+      "vhost": "vhost",
+      "destination": "patient.medication.created",
+      "destination_type": "queue",
+      "routing_key": "patient.medication.created.*",
+      "arguments": {}
+    },
+    {
+      "source": "patient.updates",
+      "vhost": "vhost",
+      "destination": "patient.medication.updated",
+      "destination_type": "queue",
+      "routing_key": "patient.medication.updated.*",
+      "arguments": {}
+    },
+    {
+      "source": "patient.updates",
+      "vhost": "vhost",
+      "destination": "patient.medication.deleted",
+      "destination_type": "queue",
+      "routing_key": "patient.medication.deleted.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.created",
+      "destination_type": "queue",
+      "routing_key": "activity.created.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.updated",
+      "destination_type": "queue",
+      "routing_key": "activity.updated.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.deleted",
+      "destination_type": "queue",
+      "routing_key": "activity.deleted.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.centre_activity.created",
+      "destination_type": "queue",
+      "routing_key": "activity.centre_activity.created.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.centre_activity.updated",
+      "destination_type": "queue",
+      "routing_key": "activity.centre_activity.updated.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.centre_activity.deleted",
+      "destination_type": "queue",
+      "routing_key": "activity.centre_activity.deleted.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.centre_activity_exclusion.created",
+      "destination_type": "queue",
+      "routing_key": "activity.centre_activity_exclusion.created.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.centre_activity_exclusion.updated",
+      "destination_type": "queue",
+      "routing_key": "activity.centre_activity_exclusion.updated.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.centre_activity_exclusion.deleted",
+      "destination_type": "queue",
+      "routing_key": "activity.centre_activity_exclusion.deleted.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.routine.created",
+      "destination_type": "queue",
+      "routing_key": "activity.routine.created.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.routine.updated",
+      "destination_type": "queue",
+      "routing_key": "activity.routine.updated.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.routine.deleted",
+      "destination_type": "queue",
+      "routing_key": "activity.routine.deleted.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.preference.created",
+      "destination_type": "queue",
+      "routing_key": "activity.preference.created.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.preference.updated",
+      "destination_type": "queue",
+      "routing_key": "activity.preference.updated.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.preference.deleted",
+      "destination_type": "queue",
+      "routing_key": "activity.preference.deleted.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.recommendation.created",
+      "destination_type": "queue",
+      "routing_key": "activity.recommendation.created.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.recommendation.updated",
+      "destination_type": "queue",
+      "routing_key": "activity.recommendation.updated.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "activity.recommendation.deleted",
+      "destination_type": "queue",
+      "routing_key": "activity.recommendation.deleted.*",
+      "arguments": {}
+    },
     {
       "source": "patient.updates",
       "vhost": "vhost",
@@ -534,28 +1016,28 @@
     {
       "source": "patient.updates",
       "vhost": "vhost",
-      "destination": "scheduler.patient.prescription.created",
+      "destination": "scheduler.patient.medication.created",
       "destination_type": "queue",
-      "routing_key": "patient.prescription.created.*",
+      "routing_key": "patient.medication.created.*",
       "arguments": {}
     },
     {
       "source": "patient.updates",
       "vhost": "vhost",
-      "destination": "scheduler.patient.prescription.updated",
+      "destination": "scheduler.patient.medication.updated",
       "destination_type": "queue",
-      "routing_key": "patient.prescription.updated.*",
+      "routing_key": "patient.medication.updated.*",
       "arguments": {}
     },
     {
       "source": "patient.updates",
       "vhost": "vhost",
-      "destination": "scheduler.patient.prescription.deleted",
+      "destination": "scheduler.patient.medication.deleted",
       "destination_type": "queue",
-      "routing_key": "patient.prescription.deleted.*",
+      "routing_key": "patient.medication.deleted.*",
       "arguments": {}
     },
-        {
+    {
       "source": "activity.updates",
       "vhost": "vhost",
       "destination": "scheduler.activity.created",
@@ -603,7 +1085,7 @@
       "routing_key": "activity.centre_activity.deleted.*",
       "arguments": {}
     },
-        {
+    {
       "source": "activity.updates",
       "vhost": "vhost",
       "destination": "scheduler.activity.centre_activity_exclusion.created",
@@ -625,6 +1107,94 @@
       "destination": "scheduler.activity.centre_activity_exclusion.deleted",
       "destination_type": "queue",
       "routing_key": "activity.centre_activity_exclusion.deleted.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.activity.routine.created",
+      "destination_type": "queue",
+      "routing_key": "activity.routine.created.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.activity.routine.updated",
+      "destination_type": "queue",
+      "routing_key": "activity.routine.updated.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.activity.routine.deleted",
+      "destination_type": "queue",
+      "routing_key": "activity.routine.deleted.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.activity.preference.created",
+      "destination_type": "queue",
+      "routing_key": "activity.preference.created.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.activity.preference.updated",
+      "destination_type": "queue",
+      "routing_key": "activity.preference.updated.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.activity.preference.deleted",
+      "destination_type": "queue",
+      "routing_key": "activity.preference.deleted.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.activity.recommendation.created",
+      "destination_type": "queue",
+      "routing_key": "activity.recommendation.created.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.activity.recommendation.updated",
+      "destination_type": "queue",
+      "routing_key": "activity.recommendation.updated.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.activity.recommendation.deleted",
+      "destination_type": "queue",
+      "routing_key": "activity.recommendation.deleted.*",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost",
+      "destination": "dlq.patient.medication",
+      "destination_type": "queue",
+      "routing_key": "failed.patient.medication",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost",
+      "destination": "dlq.scheduler.patient.medication",
+      "destination_type": "queue",
+      "routing_key": "failed.scheduler.patient.medication",
       "arguments": {}
     },
     {
@@ -675,7 +1245,7 @@
       "routing_key": "failed.scheduler.activity.centre_activity",
       "arguments": {}
     },
-        {
+    {
       "source": "system.dlx",
       "vhost": "vhost", 
       "destination": "dlq.activity.centre_activity_exclusion",
@@ -689,6 +1259,54 @@
       "destination": "dlq.scheduler.activity.centre_activity_exclusion",
       "destination_type": "queue",
       "routing_key": "failed.scheduler.activity.centre_activity_exclusion",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost", 
+      "destination": "dlq.activity.routine",
+      "destination_type": "queue",
+      "routing_key": "failed.activity.routine",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost", 
+      "destination": "dlq.scheduler.activity.routine",
+      "destination_type": "queue",
+      "routing_key": "failed.scheduler.activity.routine",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost", 
+      "destination": "dlq.activity.preference",
+      "destination_type": "queue",
+      "routing_key": "failed.activity.preference",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost", 
+      "destination": "dlq.scheduler.activity.preference",
+      "destination_type": "queue",
+      "routing_key": "failed.scheduler.activity.preference",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost", 
+      "destination": "dlq.activity.recommendation",
+      "destination_type": "queue",
+      "routing_key": "failed.activity.recommendation",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost", 
+      "destination": "dlq.scheduler.activity.recommendation",
+      "destination_type": "queue",
+      "routing_key": "failed.scheduler.activity.recommendation",
       "arguments": {}
     }
   ]
