@@ -826,7 +826,7 @@
       "vhost": "vhost",
       "destination": "patient.medication.created",
       "destination_type": "queue",
-      "routing_key": "patient.medication.created.*.*",
+      "routing_key": "patient.medication.created.*",
       "arguments": {}
     },
     {
@@ -834,7 +834,7 @@
       "vhost": "vhost",
       "destination": "patient.medication.updated",
       "destination_type": "queue",
-      "routing_key": "patient.medication.updated.*.*",
+      "routing_key": "patient.medication.updated.*",
       "arguments": {}
     },
     {
@@ -842,7 +842,7 @@
       "vhost": "vhost",
       "destination": "patient.medication.deleted",
       "destination_type": "queue",
-      "routing_key": "patient.medication.deleted.*.*",
+      "routing_key": "patient.medication.deleted.*",
       "arguments": {}
     },
     {
