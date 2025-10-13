@@ -65,11 +65,11 @@ spec:
   - name: amqp
     port: 5672
     targetPort: 5672
-    nodePort: 40672
+    nodePort: 32672
   - name: management
     port: 15672
     targetPort: 15672
-    nodePort: 41672
+    nodePort: 32673
   selector:
     app: rabbitmq-prod
 ---
