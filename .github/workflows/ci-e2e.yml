@@ -94,27 +94,35 @@ jobs:
           echo "Waiting for databases to be fully initialized..."
           sleep 5
 
-      - name: Initialize database schemas
+      - name: Checkout Scheduler Service repository
+        uses: actions/checkout@v4
+        with:
+          repository: ntu-pear/PEAR_scheduler
+          path: scheduler-repo
+
+      - name: Initialize Scheduler database schema
         run: |
           echo "=== Initializing Scheduler Service Database Schema ==="
           
-          # Pull the scheduler image
-          docker pull ${SCHEDULER_SERVICE_IMAGE}
+          cd scheduler-repo
           
-          echo "Running create_table_dev.py to create scheduler database tables..."
+          # Install all Python dependencies from requirements.txt
+          echo "Installing Scheduler Service dependencies..."
+          pip install -r requirements.txt
           
-          # Run the schema creation script inside a container
-          # This ensures we have all the required Python dependencies
-          docker run --rm \
-            --network ${{ job.services.sqlserver.network }} \
-            -e DB_SERVER_DEV=sqlserver \
-            -e DB_DATABASE_DEV=${SCHEDULER_DB_NAME} \
-            -e DB_DATABASE_PORT=${DB_PORT} \
-            -e DB_USERNAME_DEV=${DB_USERNAME} \
-            -e DB_PASSWORD_DEV=${DB_PASSWORD} \
-            -e DB_DRIVER_DEV="ODBC Driver 17 for SQL Server" \
-            ${SCHEDULER_SERVICE_IMAGE} \
-            python /pear_schedule/create_table_dev.py
+          # Set environment variables for the script
+          export DB_SERVER_DEV=localhost
+          export DB_DATABASE_DEV=${SCHEDULER_DB_NAME}
+          export DB_DATABASE_PORT=${DB_PORT}
+          export DB_USERNAME_DEV=${DB_USERNAME}
+          export DB_PASSWORD_DEV=${DB_PASSWORD}
+          export DB_DRIVER_DEV="ODBC Driver 17 for SQL Server"
+          
+          # Run the schema creation script
+          echo "Running create_table_dev.py to create database tables..."
+          python create_table_dev.py
+          
+          cd ..
           
           echo "Scheduler database schema created successfully!"
           echo "================================================="
