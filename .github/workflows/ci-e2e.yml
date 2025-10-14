@@ -114,7 +114,7 @@ jobs:
             -e DB_PASSWORD_DEV=${DB_PASSWORD} \
             -e DB_DRIVER_DEV="ODBC Driver 17 for SQL Server" \
             ${SCHEDULER_SERVICE_IMAGE} \
-            python create_table_dev.py
+            python /pear_schedule/create_table_dev.py
           
           echo "Scheduler database schema created successfully!"
           echo "================================================="
