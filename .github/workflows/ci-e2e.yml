@@ -290,33 +290,33 @@ jobs:
           echo ""
           echo "=== Testing RabbitMQ Connection ==="
           python3 -c "
-            import pika
-            import sys
+import pika
+import sys
 
-            try:
-                credentials = pika.PlainCredentials('${RABBITMQ_USER}', '${RABBITMQ_PASSWORD}')
-                parameters = pika.ConnectionParameters(
-                    host='localhost',
-                    port=${RABBITMQ_PORT},
-                    virtual_host='${RABBITMQ_VHOST}',
-                    credentials=credentials,
-                    connection_attempts=3,
-                    retry_delay=2
-                )
-                connection = pika.BlockingConnection(parameters)
-                connection.close()
-                print('RabbitMQ connection test successful')
-                sys.exit(0)
-            except Exception as e:
-                print(f'RabbitMQ connection test failed: {e}')
-                sys.exit(1)
-            "
+try:
+    credentials = pika.PlainCredentials('${RABBITMQ_USER}', '${RABBITMQ_PASSWORD}')
+    parameters = pika.ConnectionParameters(
+        host='localhost',
+        port=${RABBITMQ_PORT},
+        virtual_host='${RABBITMQ_VHOST}',
+        credentials=credentials,
+        connection_attempts=3,
+        retry_delay=2
+    )
+    connection = pika.BlockingConnection(parameters)
+    connection.close()
+    print('RabbitMQ connection test successful')
+    sys.exit(0)
+except Exception as e:
+    print(f'RabbitMQ connection test failed: {e}')
+    sys.exit(1)
+"
           
-            if [ $? -ne 0 ]; then
-              echo "RabbitMQ connection test failed!"
-              docker logs rabbitmq --tail 50
-              exit 1
-            fi
+          if [ $? -ne 0 ]; then
+            echo "RabbitMQ connection test failed!"
+            docker logs rabbitmq --tail 50
+            exit 1
+          fi
 
       - name: Run ALL E2E Tests (Infrastructure + Service Integration)
         env:
