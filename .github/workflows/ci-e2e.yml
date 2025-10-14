@@ -226,14 +226,35 @@ jobs:
           echo "Waiting for Activity Service to be ready..."
           sleep 15
           
+          # Check if container is running
+          if ! docker ps | grep -q activity-service; then
+            echo "ERROR: Activity Service container is not running!"
+            echo "Container status:"
+            docker ps -a | grep activity-service
+            echo "Container logs:"
+            docker logs activity-service
+            exit 1
+          fi
+          
           # Health check for Activity Service
           for i in {1..30}; do
+            # First check if container is still running
+            if ! docker ps | grep -q activity-service; then
+              echo "ERROR: Activity Service container stopped running!"
+              echo "Container logs:"
+              docker logs activity-service
+              exit 1
+            fi
+            
             if curl -s http://localhost:8001/health > /dev/null 2>&1 || curl -s http://localhost:8001/ > /dev/null 2>&1; then
               echo "Activity Service is ready!"
               break
             fi
             if [ $i -eq 30 ]; then
-              echo "Activity Service may not be fully ready, but continuing..."
+              echo "ERROR: Activity Service failed to become ready after 60 seconds"
+              echo "Container logs:"
+              docker logs activity-service --tail 100
+              exit 1
             fi
             echo "Waiting for Activity Service... ($i/30)"
             sleep 2
@@ -262,14 +283,35 @@ jobs:
           echo "Waiting for Scheduler Service to be ready..."
           sleep 15
           
+          # Check if container is running
+          if ! docker ps | grep -q scheduler-service; then
+            echo "ERROR: Scheduler Service container is not running!"
+            echo "Container status:"
+            docker ps -a | grep scheduler-service
+            echo "Container logs:"
+            docker logs scheduler-service
+            exit 1
+          fi
+          
           # Health check for Scheduler Service
           for i in {1..30}; do
+            # First check if container is still running
+            if ! docker ps | grep -q scheduler-service; then
+              echo "ERROR: Scheduler Service container stopped running!"
+              echo "Container logs:"
+              docker logs scheduler-service
+              exit 1
+            fi
+            
             if curl -s http://localhost:8002/health > /dev/null 2>&1 || curl -s http://localhost:8002/ > /dev/null 2>&1; then
               echo "Scheduler Service is ready!"
               break
             fi
             if [ $i -eq 30 ]; then
-              echo "Scheduler Service may not be fully ready, but continuing..."
+              echo "ERROR: Scheduler Service failed to become ready after 60 seconds"
+              echo "Container logs:"
+              docker logs scheduler-service --tail 100
+              exit 1
             fi
             echo "Waiting for Scheduler Service... ($i/30)"
             sleep 2
