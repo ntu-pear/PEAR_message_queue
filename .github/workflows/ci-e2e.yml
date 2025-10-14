@@ -91,6 +91,29 @@ jobs:
           END"
           
           echo "Test databases created"
+          echo "Waiting for databases to be fully initialized..."
+          sleep 5
+
+      - name: Initialize database schemas
+        run: |
+          echo "Checking for database initialization requirements..."
+          
+          # Check if there are any SQL schema files
+          if [ -d "database" ] || [ -d "sql" ] || [ -d "migrations" ]; then
+            echo "Found database schema files"
+            ls -la database/ sql/ migrations/ 2>/dev/null || true
+          else
+            echo "No database schema directories found"
+          fi
+          
+          # Check for Alembic or other migration tools
+          if [ -f "alembic.ini" ]; then
+            echo "Found alembic.ini - running migrations"
+            pip install alembic
+            alembic upgrade head || echo "Alembic migration failed or not configured"
+          fi
+          
+          echo "Database initialization check complete"
 
       - name: Start RabbitMQ
         run: |
@@ -210,20 +233,29 @@ jobs:
           # Get the SQL Server container network
           SQLSERVER_NETWORK=${{ job.services.sqlserver.network }}
           
+          # Create .env file for activity service
+          cat << EOF > activity.env
+          DB_SERVER_DEV=sqlserver
+          DB_DATABASE_DEV=${ACTIVITY_DB_NAME}
+          DB_DATABASE_PORT=${DB_PORT}
+          DB_USERNAME_DEV=${DB_USERNAME}
+          DB_PASSWORD_DEV=${DB_PASSWORD}
+          DB_DRIVER_DEV=ODBC Driver 17 for SQL Server
+          RABBITMQ_HOST=rabbitmq
+          RABBITMQ_PORT=${RABBITMQ_PORT}
+          RABBITMQ_VHOST=${RABBITMQ_VHOST}
+          RABBITMQ_USER=${RABBITMQ_USER}
+          RABBITMQ_PASS=${RABBITMQ_PASSWORD}
+          RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+          RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+          RABBITMQ_VIRTUAL_HOST=${RABBITMQ_VHOST}
+          EOF
+          
           docker run -d \
             --name activity-service \
             --network ${SQLSERVER_NETWORK} \
             -p 8001:8000 \
-            -e DB_SERVER=sqlserver \
-            -e DB_PORT=${DB_PORT} \
-            -e DB_DATABASE=${ACTIVITY_DB_NAME} \
-            -e DB_USERNAME=${DB_USERNAME} \
-            -e DB_PASSWORD=${DB_PASSWORD} \
-            -e RABBITMQ_HOST=rabbitmq \
-            -e RABBITMQ_PORT=${RABBITMQ_PORT} \
-            -e RABBITMQ_VHOST=${RABBITMQ_VHOST} \
-            -e RABBITMQ_USER=${RABBITMQ_USER} \
-            -e RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD} \
+            --env-file activity.env \
             ${ACTIVITY_SERVICE_IMAGE}
           
           echo "Activity Service started on network: ${SQLSERVER_NETWORK}"
@@ -271,25 +303,34 @@ jobs:
           # Get the SQL Server container network
           SQLSERVER_NETWORK=${{ job.services.sqlserver.network }}
           
+          # Create .env file for scheduler service
+          cat << EOF > scheduler.env
+          DB_SERVER_DEV=sqlserver
+          DB_DATABASE_DEV=${SCHEDULER_DB_NAME}
+          DB_DATABASE_PORT=${DB_PORT}
+          DB_USERNAME_DEV=${DB_USERNAME}
+          DB_PASSWORD_DEV=${DB_PASSWORD}
+          DB_DRIVER_DEV=ODBC Driver 17 for SQL Server
+          RABBITMQ_HOST=rabbitmq
+          RABBITMQ_PORT=${RABBITMQ_PORT}
+          RABBITMQ_VHOST=${RABBITMQ_VHOST}
+          RABBITMQ_USER=${RABBITMQ_USER}
+          RABBITMQ_PASS=${RABBITMQ_PASSWORD}
+          RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+          RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+          RABBITMQ_VIRTUAL_HOST=${RABBITMQ_VHOST}
+          EOF
+          
           docker run -d \
             --name scheduler-service \
             --network ${SQLSERVER_NETWORK} \
             -p 8002:8000 \
-            -e DB_SERVER=sqlserver \
-            -e DB_PORT=${DB_PORT} \
-            -e DB_DATABASE=${SCHEDULER_DB_NAME} \
-            -e DB_USERNAME=${DB_USERNAME} \
-            -e DB_PASSWORD=${DB_PASSWORD} \
-            -e RABBITMQ_HOST=rabbitmq \
-            -e RABBITMQ_PORT=${RABBITMQ_PORT} \
-            -e RABBITMQ_VHOST=${RABBITMQ_VHOST} \
-            -e RABBITMQ_USER=${RABBITMQ_USER} \
-            -e RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD} \
+            --env-file scheduler.env \
             ${SCHEDULER_SERVICE_IMAGE}
           
           echo "Scheduler Service started on network: ${SQLSERVER_NETWORK}"
-          echo "Waiting for Scheduler Service to be ready..."
-          sleep 15
+          echo "Waiting for Scheduler Service to initialize (may take longer on first run)..."
+          sleep 30
           
           # Check if container is running
           if ! docker ps | grep -q scheduler-service; then
