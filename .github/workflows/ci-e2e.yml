@@ -207,22 +207,26 @@ jobs:
         run: |
           docker pull ${ACTIVITY_SERVICE_IMAGE}
           
+          # Get the SQL Server container network
+          SQLSERVER_NETWORK=${{ job.services.sqlserver.network }}
+          
           docker run -d \
             --name activity-service \
-            --network ${{ job.services.sqlserver.network }} \
+            --network ${SQLSERVER_NETWORK} \
             -p 8001:8000 \
-            -e DB_SERVER=${DB_SERVER} \
+            -e DB_SERVER=sqlserver \
             -e DB_PORT=${DB_PORT} \
             -e DB_DATABASE=${ACTIVITY_DB_NAME} \
             -e DB_USERNAME=${DB_USERNAME} \
             -e DB_PASSWORD=${DB_PASSWORD} \
-            -e RABBITMQ_HOST=${RABBITMQ_HOST} \
+            -e RABBITMQ_HOST=rabbitmq \
             -e RABBITMQ_PORT=${RABBITMQ_PORT} \
             -e RABBITMQ_VHOST=${RABBITMQ_VHOST} \
             -e RABBITMQ_USER=${RABBITMQ_USER} \
             -e RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD} \
             ${ACTIVITY_SERVICE_IMAGE}
           
+          echo "Activity Service started on network: ${SQLSERVER_NETWORK}"
           echo "Waiting for Activity Service to be ready..."
           sleep 15
           
@@ -264,22 +268,26 @@ jobs:
         run: |
           docker pull ${SCHEDULER_SERVICE_IMAGE}
           
+          # Get the SQL Server container network
+          SQLSERVER_NETWORK=${{ job.services.sqlserver.network }}
+          
           docker run -d \
             --name scheduler-service \
-            --network ${{ job.services.sqlserver.network }} \
+            --network ${SQLSERVER_NETWORK} \
             -p 8002:8000 \
-            -e DB_SERVER=${DB_SERVER} \
+            -e DB_SERVER=sqlserver \
             -e DB_PORT=${DB_PORT} \
             -e DB_DATABASE=${SCHEDULER_DB_NAME} \
             -e DB_USERNAME=${DB_USERNAME} \
             -e DB_PASSWORD=${DB_PASSWORD} \
-            -e RABBITMQ_HOST=${RABBITMQ_HOST} \
+            -e RABBITMQ_HOST=rabbitmq \
             -e RABBITMQ_PORT=${RABBITMQ_PORT} \
             -e RABBITMQ_VHOST=${RABBITMQ_VHOST} \
             -e RABBITMQ_USER=${RABBITMQ_USER} \
             -e RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD} \
             ${SCHEDULER_SERVICE_IMAGE}
           
+          echo "Scheduler Service started on network: ${SQLSERVER_NETWORK}"
           echo "Waiting for Scheduler Service to be ready..."
           sleep 15
           
