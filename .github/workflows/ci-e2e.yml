@@ -107,6 +107,11 @@ jobs:
           log.console.level = info
           EOF
           
+          # Create enabled_plugins file to enable management plugin
+          cat << EOF > rabbitmq-config/enabled_plugins
+          [rabbitmq_management].
+          EOF
+          
           # Create a custom entrypoint script to handle cookie permissions
           cat << 'EOF' > rabbitmq-entrypoint.sh
           #!/bin/bash
@@ -176,6 +181,7 @@ jobs:
           # Verify vhost is accessible
           echo "Verifying vhost '${RABBITMQ_VHOST}' is accessible..."
           curl -s -u ${RABBITMQ_USER}:${RABBITMQ_PASSWORD} http://localhost:${RABBITMQ_MANAGEMENT_PORT}/api/vhosts/${RABBITMQ_VHOST}
+      
       - name: Load RabbitMQ definitions
         run: |
           if [ -f "./definitions.yaml" ]; then
