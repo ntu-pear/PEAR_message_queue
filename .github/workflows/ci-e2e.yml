@@ -96,24 +96,28 @@ jobs:
 
       - name: Initialize database schemas
         run: |
-          echo "Checking for database initialization requirements..."
+          echo "=== Initializing Scheduler Service Database Schema ==="
           
-          # Check if there are any SQL schema files
-          if [ -d "database" ] || [ -d "sql" ] || [ -d "migrations" ]; then
-            echo "Found database schema files"
-            ls -la database/ sql/ migrations/ 2>/dev/null || true
-          else
-            echo "No database schema directories found"
-          fi
+          # Pull the scheduler image
+          docker pull ${SCHEDULER_SERVICE_IMAGE}
           
-          # Check for Alembic or other migration tools
-          if [ -f "alembic.ini" ]; then
-            echo "Found alembic.ini - running migrations"
-            pip install alembic
-            alembic upgrade head || echo "Alembic migration failed or not configured"
-          fi
+          echo "Running create_table_dev.py to create scheduler database tables..."
           
-          echo "Database initialization check complete"
+          # Run the schema creation script inside a container
+          # This ensures we have all the required Python dependencies
+          docker run --rm \
+            --network ${{ job.services.sqlserver.network }} \
+            -e DB_SERVER_DEV=sqlserver \
+            -e DB_DATABASE_DEV=${SCHEDULER_DB_NAME} \
+            -e DB_DATABASE_PORT=${DB_PORT} \
+            -e DB_USERNAME_DEV=${DB_USERNAME} \
+            -e DB_PASSWORD_DEV=${DB_PASSWORD} \
+            -e DB_DRIVER_DEV="ODBC Driver 17 for SQL Server" \
+            ${SCHEDULER_SERVICE_IMAGE} \
+            python create_table_dev.py
+          
+          echo "Scheduler database schema created successfully!"
+          echo "================================================="
 
       - name: Start RabbitMQ
         run: |
