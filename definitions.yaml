@@ -49,6 +49,15 @@
       "arguments": {}
     },
     {
+      "name": "reconciliation.events",
+      "vhost": "vhost",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
       "name": "system.dlx",
       "vhost": "vhost",
       "type": "direct",
@@ -684,6 +693,19 @@
       }
     },
     {
+      "name": "reconciliation.drift.detected",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 86400000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.reconciliation.drift",
+        "x-delivery-limit": 3
+      }
+    },
+    {
       "name": "dlq.patient.medication",
       "vhost": "vhost",
       "durable": true,
@@ -790,6 +812,13 @@
     },
     {
       "name": "dlq.scheduler.activity.recommendation",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "dlq.reconciliation.drift",
       "vhost": "vhost",
       "durable": true,
       "auto_delete": false,
@@ -1182,6 +1211,14 @@
       "arguments": {}
     },
     {
+      "source": "reconciliation.events",
+      "vhost": "vhost",
+      "destination": "reconciliation.drift.detected",
+      "destination_type": "queue",
+      "routing_key": "drift.detected.#",
+      "arguments": {}
+    },
+    {
       "source": "system.dlx",
       "vhost": "vhost",
       "destination": "dlq.patient.medication",
@@ -1307,6 +1344,14 @@
       "destination": "dlq.scheduler.activity.recommendation",
       "destination_type": "queue",
       "routing_key": "failed.scheduler.activity.recommendation",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost",
+      "destination": "dlq.reconciliation.drift",
+      "destination_type": "queue",
+      "routing_key": "failed.reconciliation.drift",
       "arguments": {}
     }
   ]
