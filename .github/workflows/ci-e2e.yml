@@ -94,24 +94,65 @@ jobs:
 
       - name: Start RabbitMQ
         run: |
+          # Create configuration directory and file
+          mkdir -p rabbitmq-config
+          cat << EOF > rabbitmq-config/rabbitmq.conf
+          # Disable cluster peer discovery
+          cluster_formation.peer_discovery_backend = classic_config
+          # Enable management plugin
+          management.tcp.port = 15672
+          management.tcp.ip = 0.0.0.0
+          # Log to stdout
+          log.console = true
+          log.console.level = info
+          EOF
+          
+          # Create a custom entrypoint script to handle cookie permissions
+          cat << 'EOF' > rabbitmq-entrypoint.sh
+          #!/bin/bash
+          set -e
+          # Ensure directory exists
+          mkdir -p /var/lib/rabbitmq
+          # Set Erlang cookie with proper permissions
+          echo "TESTCOOKIE123" > /var/lib/rabbitmq/.erlang.cookie
+          chown rabbitmq:rabbitmq /var/lib/rabbitmq/.erlang.cookie
+          chmod 600 /var/lib/rabbitmq/.erlang.cookie
+          # Start RabbitMQ
+          exec docker-entrypoint.sh rabbitmq-server
+          EOF
+          
+          chmod +x rabbitmq-entrypoint.sh
+          
+          # Pull the Docker image
           docker pull ${RABBITMQ_IMAGE} || docker pull rabbitmq:4.1.1-management
           
+          # Start container with configuration
           docker run -d \
             --name rabbitmq \
             --network ${{ job.services.sqlserver.network }} \
+            --memory="800m" \
             -p 5672:5672 \
             -p 15672:15672 \
+            -e RABBITMQ_ERLANG_COOKIE="TESTCOOKIE123" \
             -e RABBITMQ_DEFAULT_USER=${RABBITMQ_USER} \
             -e RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD} \
             -e RABBITMQ_DEFAULT_VHOST=${RABBITMQ_VHOST} \
+            -v $(pwd)/rabbitmq-config:/etc/rabbitmq \
+            -v $(pwd)/rabbitmq-entrypoint.sh:/usr/local/bin/custom-entrypoint \
+            --entrypoint /usr/local/bin/custom-entrypoint \
             ${RABBITMQ_IMAGE} || docker run -d \
             --name rabbitmq \
             --network ${{ job.services.sqlserver.network }} \
+            --memory="800m" \
             -p 5672:5672 \
             -p 15672:15672 \
+            -e RABBITMQ_ERLANG_COOKIE="TESTCOOKIE123" \
             -e RABBITMQ_DEFAULT_USER=${RABBITMQ_USER} \
             -e RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD} \
             -e RABBITMQ_DEFAULT_VHOST=${RABBITMQ_VHOST} \
+            -v $(pwd)/rabbitmq-config:/etc/rabbitmq \
+            -v $(pwd)/rabbitmq-entrypoint.sh:/usr/local/bin/custom-entrypoint \
+            --entrypoint /usr/local/bin/custom-entrypoint \
             rabbitmq:4.1.1-management
           
           echo "Waiting for RabbitMQ to start..."
@@ -135,7 +176,6 @@ jobs:
           # Verify vhost is accessible
           echo "Verifying vhost '${RABBITMQ_VHOST}' is accessible..."
           curl -s -u ${RABBITMQ_USER}:${RABBITMQ_PASSWORD} http://localhost:${RABBITMQ_MANAGEMENT_PORT}/api/vhosts/${RABBITMQ_VHOST}
-
       - name: Load RabbitMQ definitions
         run: |
           if [ -f "./definitions.yaml" ]; then
