@@ -9,8 +9,8 @@ on:
 env:
   # Staging images
   RABBITMQ_IMAGE: '192.168.188.184:5000/rabbitmq_service_dev:latest'
-  ACTIVITY_SERVICE_IMAGE: '192.168.188.186:5000/activity_service_prod:latest'
-  SCHEDULER_SERVICE_IMAGE: '192.168.188.173:5000/pear_schedule_prod:latest'
+  ACTIVITY_SERVICE_IMAGE: '192.168.188.186:5000/activity_service_dev:latest'
+  SCHEDULER_SERVICE_IMAGE: '192.168.188.173:5000/pear_schedule:latest'
   
   # Database configurations
   DB_SERVER: 'sqlserver'
