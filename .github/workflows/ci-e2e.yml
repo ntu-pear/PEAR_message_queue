@@ -282,36 +282,42 @@ jobs:
           echo "RabbitMQ: $(docker ps --filter name=rabbitmq --format '{{.Status}}')"
           echo "Activity Service: $(docker ps --filter name=activity-service --format '{{.Status}}')"
           echo "Scheduler Service: $(docker ps --filter name=scheduler-service --format '{{.Status}}')"
-          
+
           echo ""
           echo "=== RabbitMQ Status ==="
           curl -s -u ${RABBITMQ_USER}:${RABBITMQ_PASSWORD} http://localhost:${RABBITMQ_MANAGEMENT_PORT}/api/overview | grep -o '"rabbitmq_version":"[^"]*"' || echo "Could not fetch RabbitMQ version"
-          
+
           echo ""
           echo "=== Testing RabbitMQ Connection ==="
-          python3 -c "
+          python3 - <<'PYCODE'
 import pika
 import sys
+import os
+
+user = os.getenv("RABBITMQ_USER")
+password = os.getenv("RABBITMQ_PASSWORD")
+port = int(os.getenv("RABBITMQ_PORT", "5672"))
+vhost = os.getenv("RABBITMQ_VHOST", "/")
 
 try:
-    credentials = pika.PlainCredentials('${RABBITMQ_USER}', '${RABBITMQ_PASSWORD}')
+    credentials = pika.PlainCredentials(user, password)
     parameters = pika.ConnectionParameters(
         host='localhost',
-        port=${RABBITMQ_PORT},
-        virtual_host='${RABBITMQ_VHOST}',
+        port=port,
+        virtual_host=vhost,
         credentials=credentials,
         connection_attempts=3,
         retry_delay=2
     )
     connection = pika.BlockingConnection(parameters)
     connection.close()
-    print('RabbitMQ connection test successful')
+    print("RabbitMQ connection test successful")
     sys.exit(0)
 except Exception as e:
-    print(f'RabbitMQ connection test failed: {e}')
+    print(f"RabbitMQ connection test failed: {e}")
     sys.exit(1)
-"
-          
+PYCODE
+
           if [ $? -ne 0 ]; then
             echo "RabbitMQ connection test failed!"
             docker logs rabbitmq --tail 50
