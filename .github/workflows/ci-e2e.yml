@@ -10,6 +10,7 @@ env:
   # Staging images
   RABBITMQ_IMAGE: '192.168.188.184:5000/rabbitmq_service_dev:latest'
   ACTIVITY_SERVICE_IMAGE: '192.168.188.186:5000/activity_service_dev:latest'
+  PATIENT_SERVICE_IMAGE: '192.168.188.180:5000/patient_service_dev:latest'
   SCHEDULER_SERVICE_IMAGE: '192.168.188.186:5000/scheduler_service_dev:latest'
   
   # Database configurations
@@ -18,6 +19,7 @@ env:
   DB_USERNAME: 'sa'
   DB_PASSWORD: 'Fyppear@test'
   ACTIVITY_DB_NAME: 'activity_service_test'
+  PATIENT_DB_NAME: 'patient_service_test'
   SCHEDULER_DB_NAME: 'scheduler_service_test'
   
   # RabbitMQ configurations
@@ -82,6 +84,12 @@ jobs:
           IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = '${ACTIVITY_DB_NAME}')
           BEGIN
             CREATE DATABASE ${ACTIVITY_DB_NAME};
+          END"
+          
+          docker exec ${{ job.services.sqlserver.id }} /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Fyppear@test -Q "
+          IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = '${PATIENT_DB_NAME}')
+          BEGIN
+            CREATE DATABASE ${PATIENT_DB_NAME};
           END"
           
           docker exec ${{ job.services.sqlserver.id }} /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Fyppear@test -Q "
@@ -279,6 +287,66 @@ jobs:
             docker logs activity-service --tail 50
           fi
 
+      - name: Start Patient Service
+        run: |
+          docker pull ${PATIENT_SERVICE_IMAGE}
+          
+          # Get the SQL Server container network
+          SQLSERVER_NETWORK=${{ job.services.sqlserver.network }}
+          
+          # Create .env file for patient service
+          cat << EOF > patient.env
+          DB_SERVER_DEV=sqlserver
+          DB_DATABASE_DEV=${PATIENT_DB_NAME}
+          DB_DATABASE_PORT=${DB_PORT}
+          DB_USERNAME_DEV=${DB_USERNAME}
+          DB_PASSWORD_DEV=${DB_PASSWORD}
+          DB_DRIVER_DEV=ODBC Driver 17 for SQL Server
+          RABBITMQ_HOST=rabbitmq
+          RABBITMQ_PORT=${RABBITMQ_PORT}
+          RABBITMQ_VHOST=${RABBITMQ_VHOST}
+          RABBITMQ_USER=${RABBITMQ_USER}
+          RABBITMQ_PASS=${RABBITMQ_PASSWORD}
+          RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+          RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+          RABBITMQ_VIRTUAL_HOST=${RABBITMQ_VHOST}
+          EOF
+          
+          docker run -d \
+            --name patient-service \
+            --network ${SQLSERVER_NETWORK} \
+            -p 8003:8000 \
+            --env-file patient.env \
+            ${PATIENT_SERVICE_IMAGE}
+          
+          echo "Patient Service started on network: ${SQLSERVER_NETWORK}"
+          echo "Waiting for Patient Service to be ready..."
+          sleep 15
+
+      - name: Connect Patient Service to RabbitMQ network
+        run: |
+          RABBITMQ_NETWORK="${{ steps.get-network.outputs.network }}"
+          docker network connect ${RABBITMQ_NETWORK} patient-service || echo "Already connected"
+          echo "Patient Service connected to both networks"
+
+      - name: Verify Patient Service health
+        run: |
+          echo "Checking Patient Service health..."
+          for i in {1..10}; do
+            if curl -f http://localhost:8003/health > /dev/null 2>&1; then
+              echo "Patient Service is healthy!"
+              break
+            fi
+            echo "Waiting for Patient Service health check... ($i/10)"
+            sleep 3
+          done
+          
+          # Show logs if not healthy
+          if ! curl -f http://localhost:8003/health > /dev/null 2>&1; then
+            echo "Patient Service health check failed. Logs:"
+            docker logs patient-service --tail 50
+          fi
+
       - name: Start Scheduler Service
         run: |
           docker pull ${SCHEDULER_SERVICE_IMAGE}
@@ -331,6 +399,9 @@ jobs:
           echo "=== Activity Service ==="
           docker ps -a | grep activity-service
           
+          echo "=== Patient Service ==="
+          docker ps -a | grep patient-service
+          
           echo "=== Scheduler Service ==="
           docker ps -a | grep scheduler-service
           
@@ -347,6 +418,15 @@ jobs:
             docker ps -a | grep activity-service
             echo "Container logs:"
             docker logs activity-service --tail 50
+            exit 1
+          fi
+          
+          if ! docker ps | grep -q patient-service; then
+            echo "ERROR: Patient Service container is not running!"
+            echo "Container status:"
+            docker ps -a | grep patient-service
+            echo "Container logs:"
+            docker logs patient-service --tail 50
             exit 1
           fi
           
@@ -372,7 +452,14 @@ jobs:
           RABBITMQ_PASSWORD: ${{ env.RABBITMQ_PASSWORD }}
           RABBITMQ_VHOST: ${{ env.RABBITMQ_VHOST }}
           ACTIVITY_SERVICE_URL: http://localhost:8001
+          PATIENT_SERVICE_URL: http://localhost:8003
           SCHEDULER_SERVICE_URL: http://localhost:8002
+          DB_SERVER: sqlserver
+          DB_PORT: ${{ env.DB_PORT }}
+          DB_USERNAME: ${{ env.DB_USERNAME }}
+          DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          PATIENT_DB_NAME: ${{ env.PATIENT_DB_NAME }}
+          SCHEDULER_DB_NAME: ${{ env.SCHEDULER_DB_NAME }}
 
       - name: Show service logs on failure
         if: failure()
@@ -383,6 +470,9 @@ jobs:
           echo "=== Activity Service Logs ==="
           docker logs activity-service --tail 100
           
+          echo "=== Patient Service Logs ==="
+          docker logs patient-service --tail 100
+          
           echo "=== Scheduler Service Logs ==="
           docker logs scheduler-service --tail 100
 
@@ -390,6 +480,6 @@ jobs:
         if: always()
         run: |
           echo "Cleaning up containers..."
-          docker stop rabbitmq activity-service scheduler-service 2>/dev/null || true
-          docker rm rabbitmq activity-service scheduler-service 2>/dev/null || true
+          docker stop rabbitmq activity-service patient-service scheduler-service 2>/dev/null || true
+          docker rm rabbitmq activity-service patient-service scheduler-service 2>/dev/null || true
           echo "Cleanup complete"
