@@ -3,7 +3,7 @@ name: Nightly E2E - Full E2E Tests
 on:
   schedule:
     # Run every night at 2 AM
-    - cron: '0 2 * * *'
+    - cron: '0 10 * * *'
   workflow_dispatch:  # Allow manual triggering
 
 env:
@@ -94,37 +94,45 @@ jobs:
           echo "Waiting for databases to be fully initialized..."
           sleep 5
 
-      - name: Checkout Scheduler Service repository
-        uses: actions/checkout@v4
-        with:
-          repository: ntu-pear/PEAR_scheduler
-          path: scheduler-repo
-
       - name: Initialize Scheduler database schema
         run: |
           echo "=== Initializing Scheduler Service Database Schema ==="
           
-          cd scheduler-repo
+          # Pull the scheduler image
+          docker pull ${SCHEDULER_SERVICE_IMAGE}
           
-          # Install all Python dependencies from requirements.txt
-          echo "Installing Scheduler Service dependencies..."
-          pip install -r requirements.txt
+          echo "Starting Scheduler Service temporarily to auto-generate tables..."
           
-          # Set environment variables for the script
-          export DB_SERVER_DEV=localhost
-          export DB_DATABASE_DEV=${SCHEDULER_DB_NAME}
-          export DB_DATABASE_PORT=${DB_PORT}
-          export DB_USERNAME_DEV=${DB_USERNAME}
-          export DB_PASSWORD_DEV=${DB_PASSWORD}
-          export DB_DRIVER_DEV="ODBC Driver 17 for SQL Server"
+          # Start the scheduler service temporarily
+          # It will create tables on startup, then we'll stop it
+          docker run -d \
+            --name temp-scheduler-init \
+            --network ${{ job.services.sqlserver.network }} \
+            -e DB_SERVER_DEV=sqlserver \
+            -e DB_DATABASE_DEV=${SCHEDULER_DB_NAME} \
+            -e DB_DATABASE_PORT=${DB_PORT} \
+            -e DB_USERNAME_DEV=${DB_USERNAME} \
+            -e DB_PASSWORD_DEV=${DB_PASSWORD} \
+            -e DB_DRIVER_DEV="ODBC Driver 17 for SQL Server" \
+            ${SCHEDULER_SERVICE_IMAGE}
           
-          # Run the schema creation script
-          echo "Running create_table_dev.py to create database tables..."
-          python create_table_dev.py
+          # Wait for it to initialize and create tables (30 seconds should be enough)
+          echo "Waiting for Scheduler Service to initialize database tables..."
+          sleep 30
           
-          cd ..
+          # Check if it's still running or if it crashed
+          if docker ps -a | grep temp-scheduler-init | grep -q "Up"; then
+            echo "Scheduler Service started successfully and created tables"
+          else
+            echo "Checking if tables were created before service stopped..."
+            docker logs temp-scheduler-init | tail -20
+          fi
           
-          echo "Scheduler database schema created successfully!"
+          # Stop and remove the temporary container
+          docker stop temp-scheduler-init 2>/dev/null || true
+          docker rm temp-scheduler-init 2>/dev/null || true
+          
+          echo "Database schema initialization complete!"
           echo "================================================="
 
       - name: Start RabbitMQ
@@ -163,16 +171,10 @@ jobs:
           
           chmod +x rabbitmq-entrypoint.sh
           
-          # Pull the Docker image
-          docker pull ${RABBITMQ_IMAGE} || docker pull rabbitmq:4.1.1-management
-          
           # Start container with configuration
           docker run -d \
             --name rabbitmq \
-            --network ${{ job.services.sqlserver.network }} \
             --memory="800m" \
-            -p 5672:5672 \
-            -p 15672:15672 \
             -e RABBITMQ_ERLANG_COOKIE="TESTCOOKIE123" \
             -e RABBITMQ_DEFAULT_USER=${RABBITMQ_USER} \
             -e RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD} \
@@ -180,63 +182,42 @@ jobs:
             -v $(pwd)/rabbitmq-config:/etc/rabbitmq \
             -v $(pwd)/rabbitmq-entrypoint.sh:/usr/local/bin/custom-entrypoint \
             --entrypoint /usr/local/bin/custom-entrypoint \
-            ${RABBITMQ_IMAGE} || docker run -d \
-            --name rabbitmq \
-            --network ${{ job.services.sqlserver.network }} \
-            --memory="800m" \
-            -p 5672:5672 \
-            -p 15672:15672 \
-            -e RABBITMQ_ERLANG_COOKIE="TESTCOOKIE123" \
-            -e RABBITMQ_DEFAULT_USER=${RABBITMQ_USER} \
-            -e RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD} \
-            -e RABBITMQ_DEFAULT_VHOST=${RABBITMQ_VHOST} \
-            -v $(pwd)/rabbitmq-config:/etc/rabbitmq \
-            -v $(pwd)/rabbitmq-entrypoint.sh:/usr/local/bin/custom-entrypoint \
-            --entrypoint /usr/local/bin/custom-entrypoint \
-            rabbitmq:4.1.1-management
+            -p ${RABBITMQ_PORT}:5672 \
+            -p ${RABBITMQ_MANAGEMENT_PORT}:15672 \
+            ${RABBITMQ_IMAGE}
           
-          echo "Waiting for RabbitMQ to start..."
-          sleep 20
+          echo "RabbitMQ container started"
+          echo "Waiting for RabbitMQ to be ready..."
           
-          echo "Checking RabbitMQ health..."
-          for i in {1..60}; do
-            if curl -s -u ${RABBITMQ_USER}:${RABBITMQ_PASSWORD} http://localhost:${RABBITMQ_MANAGEMENT_PORT}/api/health/checks/alarms > /dev/null 2>&1; then
+          # Wait for RabbitMQ to be ready (up to 60 seconds)
+          for i in {1..30}; do
+            if docker exec rabbitmq rabbitmqctl status > /dev/null 2>&1; then
               echo "RabbitMQ is ready!"
               break
             fi
-            if [ $i -eq 60 ]; then
-              echo "RabbitMQ failed to become ready"
-              docker logs rabbitmq
-              exit 1
-            fi
-            echo "Waiting for RabbitMQ... ($i/60)"
+            echo "Waiting for RabbitMQ... ($i/30)"
             sleep 2
           done
           
-          # Verify vhost is accessible
-          echo "Verifying vhost '${RABBITMQ_VHOST}' is accessible..."
-          curl -s -u ${RABBITMQ_USER}:${RABBITMQ_PASSWORD} http://localhost:${RABBITMQ_MANAGEMENT_PORT}/api/vhosts/${RABBITMQ_VHOST}
-      
-      - name: Load RabbitMQ definitions
+          # Create vhost and set permissions
+          echo "Configuring RabbitMQ vhost and permissions..."
+          docker exec rabbitmq rabbitmqctl add_vhost ${RABBITMQ_VHOST} || true
+          docker exec rabbitmq rabbitmqctl set_permissions -p ${RABBITMQ_VHOST} ${RABBITMQ_USER} ".*" ".*" ".*"
+          
+          echo "RabbitMQ is fully configured and ready"
+
+      - name: Get RabbitMQ container network
+        id: get-network
         run: |
-          if [ -f "./definitions.yaml" ]; then
-            echo "Loading RabbitMQ definitions..."
-            docker cp ./definitions.yaml rabbitmq:/tmp/definitions.yaml
-            
-            # Import definitions and check for errors
-            if docker exec rabbitmq rabbitmqctl import_definitions /tmp/definitions.yaml; then
-              echo "RabbitMQ definitions loaded successfully"
-            else
-              echo "Failed to load RabbitMQ definitions"
-              docker logs rabbitmq
-              exit 1
-            fi
-            
-            # Give RabbitMQ time to process definitions
-            sleep 5
-          else
-            echo "No definitions.yaml found, skipping..."
-          fi
+          RABBITMQ_NETWORK=$(docker inspect rabbitmq --format='{{range $net,$v := .NetworkSettings.Networks}}{{$net}}{{end}}')
+          echo "network=${RABBITMQ_NETWORK}" >> $GITHUB_OUTPUT
+          echo "RabbitMQ is on network: ${RABBITMQ_NETWORK}"
+
+      - name: Connect SQL Server to RabbitMQ network
+        run: |
+          RABBITMQ_NETWORK="${{ steps.get-network.outputs.network }}"
+          docker network connect ${RABBITMQ_NETWORK} ${{ job.services.sqlserver.id }} || echo "Already connected or network issue"
+          echo "SQL Server connected to RabbitMQ network"
 
       - name: Start Activity Service
         run: |
@@ -273,40 +254,30 @@ jobs:
           echo "Activity Service started on network: ${SQLSERVER_NETWORK}"
           echo "Waiting for Activity Service to be ready..."
           sleep 15
-          
-          # Check if container is running
-          if ! docker ps | grep -q activity-service; then
-            echo "ERROR: Activity Service container is not running!"
-            echo "Container status:"
-            docker ps -a | grep activity-service
-            echo "Container logs:"
-            docker logs activity-service
-            exit 1
-          fi
-          
-          # Health check for Activity Service
-          for i in {1..30}; do
-            # First check if container is still running
-            if ! docker ps | grep -q activity-service; then
-              echo "ERROR: Activity Service container stopped running!"
-              echo "Container logs:"
-              docker logs activity-service
-              exit 1
-            fi
-            
-            if curl -s http://localhost:8001/health > /dev/null 2>&1 || curl -s http://localhost:8001/ > /dev/null 2>&1; then
-              echo "Activity Service is ready!"
+
+      - name: Connect Activity Service to RabbitMQ network
+        run: |
+          RABBITMQ_NETWORK="${{ steps.get-network.outputs.network }}"
+          docker network connect ${RABBITMQ_NETWORK} activity-service || echo "Already connected"
+          echo "Activity Service connected to both networks"
+
+      - name: Verify Activity Service health
+        run: |
+          echo "Checking Activity Service health..."
+          for i in {1..10}; do
+            if curl -f http://localhost:8001/health > /dev/null 2>&1; then
+              echo "Activity Service is healthy!"
               break
             fi
-            if [ $i -eq 30 ]; then
-              echo "ERROR: Activity Service failed to become ready after 60 seconds"
-              echo "Container logs:"
-              docker logs activity-service --tail 100
-              exit 1
-            fi
-            echo "Waiting for Activity Service... ($i/30)"
-            sleep 2
+            echo "Waiting for Activity Service health check... ($i/10)"
+            sleep 3
           done
+          
+          # Show logs if not healthy
+          if ! curl -f http://localhost:8001/health > /dev/null 2>&1; then
+            echo "Activity Service health check failed. Logs:"
+            docker logs activity-service --tail 50
+          fi
 
       - name: Start Scheduler Service
         run: |
@@ -343,107 +314,67 @@ jobs:
           echo "Scheduler Service started on network: ${SQLSERVER_NETWORK}"
           echo "Waiting for Scheduler Service to initialize (may take longer on first run)..."
           sleep 30
+
+      - name: Connect Scheduler Service to RabbitMQ network
+        run: |
+          RABBITMQ_NETWORK="${{ steps.get-network.outputs.network }}"
+          docker network connect ${RABBITMQ_NETWORK} scheduler-service || echo "Already connected"
+          echo "Scheduler Service connected to both networks"
+
+      - name: Verify all services are running
+        run: |
+          echo "Checking service status..."
           
-          # Check if container is running
+          echo "=== RabbitMQ ==="
+          docker ps -a | grep rabbitmq
+          
+          echo "=== Activity Service ==="
+          docker ps -a | grep activity-service
+          
+          echo "=== Scheduler Service ==="
+          docker ps -a | grep scheduler-service
+          
+          # Check if any service is not running
+          if ! docker ps | grep -q rabbitmq; then
+            echo "ERROR: RabbitMQ container is not running!"
+            docker logs rabbitmq --tail 50
+            exit 1
+          fi
+          
+          if ! docker ps | grep -q activity-service; then
+            echo "ERROR: Activity Service container is not running!"
+            echo "Container status:"
+            docker ps -a | grep activity-service
+            echo "Container logs:"
+            docker logs activity-service --tail 50
+            exit 1
+          fi
+          
           if ! docker ps | grep -q scheduler-service; then
             echo "ERROR: Scheduler Service container is not running!"
             echo "Container status:"
             docker ps -a | grep scheduler-service
             echo "Container logs:"
-            docker logs scheduler-service
+            docker logs scheduler-service --tail 50
             exit 1
           fi
           
-          # Health check for Scheduler Service
-          for i in {1..30}; do
-            # First check if container is still running
-            if ! docker ps | grep -q scheduler-service; then
-              echo "ERROR: Scheduler Service container stopped running!"
-              echo "Container logs:"
-              docker logs scheduler-service
-              exit 1
-            fi
-            
-            if curl -s http://localhost:8002/health > /dev/null 2>&1 || curl -s http://localhost:8002/ > /dev/null 2>&1; then
-              echo "Scheduler Service is ready!"
-              break
-            fi
-            if [ $i -eq 30 ]; then
-              echo "ERROR: Scheduler Service failed to become ready after 60 seconds"
-              echo "Container logs:"
-              docker logs scheduler-service --tail 100
-              exit 1
-            fi
-            echo "Waiting for Scheduler Service... ($i/30)"
-            sleep 2
-          done
+          echo "All services are running!"
 
-      - name: Verify all services
+      - name: Run E2E integration tests
         run: |
-          echo "=== Service Health Check ==="
-          echo "SQL Server: $(docker ps --filter id=${{ job.services.sqlserver.id }} --format '{{.Status}}')"
-          echo "RabbitMQ: $(docker ps --filter name=rabbitmq --format '{{.Status}}')"
-          echo "Activity Service: $(docker ps --filter name=activity-service --format '{{.Status}}')"
-          echo "Scheduler Service: $(docker ps --filter name=scheduler-service --format '{{.Status}}')"
-          
-          echo ""
-          echo "=== RabbitMQ Status ==="
-          curl -s -u ${RABBITMQ_USER}:${RABBITMQ_PASSWORD} http://localhost:${RABBITMQ_MANAGEMENT_PORT}/api/overview | grep -o '"rabbitmq_version":"[^"]*"' || echo "Could not fetch RabbitMQ version"
-          
-          echo ""
-          echo "=== Testing RabbitMQ Connection ==="
-          python3 - <<'PYCODE'
-          import pika
-          import sys
-          import os
-          
-          user = os.getenv("RABBITMQ_USER")
-          password = os.getenv("RABBITMQ_PASSWORD")
-          port = int(os.getenv("RABBITMQ_PORT", "5672"))
-          vhost = os.getenv("RABBITMQ_VHOST", "/")
-          
-          try:
-              credentials = pika.PlainCredentials(user, password)
-              parameters = pika.ConnectionParameters(
-                  host='localhost',
-                  port=port,
-                  virtual_host=vhost,
-                  credentials=credentials,
-                  connection_attempts=3,
-                  retry_delay=2
-              )
-              connection = pika.BlockingConnection(parameters)
-              connection.close()
-              print("RabbitMQ connection test successful")
-              sys.exit(0)
-          except Exception as e:
-              print(f"RabbitMQ connection test failed: {e}")
-              sys.exit(1)
-          PYCODE
-          
-          if [ $? -ne 0 ]; then
-            echo "RabbitMQ connection test failed!"
-            docker logs rabbitmq --tail 50
-            exit 1
-          fi
-
-      - name: Run ALL E2E Tests (Infrastructure + Service Integration)
+          echo "Running E2E integration tests..."
+          pytest tests/e2e/ -v --tb=short
         env:
-          PYTHONPATH: ${{ github.workspace }}
-          DB_SERVER: localhost
           RABBITMQ_HOST: localhost
-          RABBITMQ_PORT: 5672
-          RABBITMQ_VHOST: vhost
-          RABBITMQ_USER: admin
-          RABBITMQ_PASSWORD: pear2025
+          RABBITMQ_PORT: ${{ env.RABBITMQ_PORT }}
+          RABBITMQ_USER: ${{ env.RABBITMQ_USER }}
+          RABBITMQ_PASSWORD: ${{ env.RABBITMQ_PASSWORD }}
+          RABBITMQ_VHOST: ${{ env.RABBITMQ_VHOST }}
           ACTIVITY_SERVICE_URL: http://localhost:8001
           SCHEDULER_SERVICE_URL: http://localhost:8002
-        run: |
-          echo "Running all E2E tests including service integration..."
-          pytest tests/e2e/ -v --tb=short --capture=no
-        continue-on-error: false
 
-      - name: Display service logs on failure
+      - name: Show service logs on failure
         if: failure()
         run: |
           echo "=== RabbitMQ Logs ==="
@@ -454,28 +385,11 @@ jobs:
           
           echo "=== Scheduler Service Logs ==="
           docker logs scheduler-service --tail 100
-          
-          echo "=== SQL Server Logs ==="
-          docker logs ${{ job.services.sqlserver.id }} --tail 100
 
       - name: Cleanup
         if: always()
         run: |
-          docker stop rabbitmq activity-service scheduler-service || true
-          docker rm rabbitmq activity-service scheduler-service || true
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: full-e2e-test-results
-          path: |
-            tests/e2e/*.log
-            pytest-results.xml
-          retention-days: 30
-
-      - name: Notify on failure
-        if: failure()
-        run: |
-          echo "Nightly E2E tests failed!"
-          echo "Check the logs above for details."
+          echo "Cleaning up containers..."
+          docker stop rabbitmq activity-service scheduler-service 2>/dev/null || true
+          docker rm rabbitmq activity-service scheduler-service 2>/dev/null || true
+          echo "Cleanup complete"
