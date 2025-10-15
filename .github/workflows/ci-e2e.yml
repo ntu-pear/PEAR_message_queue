@@ -145,6 +145,10 @@ jobs:
 
       - name: Start RabbitMQ
         run: |
+          # Get the SQL Server network to use for all containers
+          SQLSERVER_NETWORK=${{ job.services.sqlserver.network }}
+          echo "Using network: ${SQLSERVER_NETWORK}"
+          
           # Create configuration directory and file
           mkdir -p rabbitmq-config
           cat << EOF > rabbitmq-config/rabbitmq.conf
@@ -179,9 +183,10 @@ jobs:
           
           chmod +x rabbitmq-entrypoint.sh
           
-          # Start container with configuration
+          # Start container with configuration ON THE SQL SERVER NETWORK
           docker run -d \
             --name rabbitmq \
+            --network ${SQLSERVER_NETWORK} \
             --memory="800m" \
             -e RABBITMQ_ERLANG_COOKIE="TESTCOOKIE123" \
             -e RABBITMQ_DEFAULT_USER=${RABBITMQ_USER} \
@@ -194,7 +199,7 @@ jobs:
             -p ${RABBITMQ_MANAGEMENT_PORT}:15672 \
             ${RABBITMQ_IMAGE}
           
-          echo "RabbitMQ container started"
+          echo "RabbitMQ container started on network: ${SQLSERVER_NETWORK}"
           echo "Waiting for RabbitMQ to be ready..."
           
           # Wait for RabbitMQ to be ready (up to 60 seconds)
@@ -213,19 +218,6 @@ jobs:
           docker exec rabbitmq rabbitmqctl set_permissions -p ${RABBITMQ_VHOST} ${RABBITMQ_USER} ".*" ".*" ".*"
           
           echo "RabbitMQ is fully configured and ready"
-
-      - name: Get RabbitMQ container network
-        id: get-network
-        run: |
-          RABBITMQ_NETWORK=$(docker inspect rabbitmq --format='{{range $net,$v := .NetworkSettings.Networks}}{{$net}}{{end}}')
-          echo "network=${RABBITMQ_NETWORK}" >> $GITHUB_OUTPUT
-          echo "RabbitMQ is on network: ${RABBITMQ_NETWORK}"
-
-      - name: Connect SQL Server to RabbitMQ network
-        run: |
-          RABBITMQ_NETWORK="${{ steps.get-network.outputs.network }}"
-          docker network connect ${RABBITMQ_NETWORK} ${{ job.services.sqlserver.id }} || echo "Already connected or network issue"
-          echo "SQL Server connected to RabbitMQ network"
 
       - name: Start Activity Service
         run: |
@@ -262,12 +254,6 @@ jobs:
           echo "Activity Service started on network: ${SQLSERVER_NETWORK}"
           echo "Waiting for Activity Service to be ready..."
           sleep 15
-
-      - name: Connect Activity Service to RabbitMQ network
-        run: |
-          RABBITMQ_NETWORK="${{ steps.get-network.outputs.network }}"
-          docker network connect ${RABBITMQ_NETWORK} activity-service || echo "Already connected"
-          echo "Activity Service connected to both networks"
 
       - name: Verify Activity Service health
         run: |
@@ -323,12 +309,6 @@ jobs:
           echo "Waiting for Patient Service to be ready..."
           sleep 15
 
-      - name: Connect Patient Service to RabbitMQ network
-        run: |
-          RABBITMQ_NETWORK="${{ steps.get-network.outputs.network }}"
-          docker network connect ${RABBITMQ_NETWORK} patient-service || echo "Already connected"
-          echo "Patient Service connected to both networks"
-
       - name: Verify Patient Service health
         run: |
           echo "Checking Patient Service health..."
@@ -382,12 +362,6 @@ jobs:
           echo "Scheduler Service started on network: ${SQLSERVER_NETWORK}"
           echo "Waiting for Scheduler Service to initialize (may take longer on first run)..."
           sleep 30
-
-      - name: Connect Scheduler Service to RabbitMQ network
-        run: |
-          RABBITMQ_NETWORK="${{ steps.get-network.outputs.network }}"
-          docker network connect ${RABBITMQ_NETWORK} scheduler-service || echo "Already connected"
-          echo "Scheduler Service connected to both networks"
 
       - name: Verify all services are running
         run: |
@@ -491,12 +465,10 @@ jobs:
         run: |
           echo "Running E2E integration tests in Docker container with ODBC drivers..."
           
-          # Get the networks
+          # Get the network
           SQLSERVER_NETWORK=${{ job.services.sqlserver.network }}
-          RABBITMQ_NETWORK="${{ steps.get-network.outputs.network }}"
           
-          echo "SQL Server network: ${SQLSERVER_NETWORK}"
-          echo "RabbitMQ network: ${RABBITMQ_NETWORK}"
+          echo "Using network: ${SQLSERVER_NETWORK}"
           
           # Give services a bit more time to fully start
           echo "Waiting for services to be fully ready..."
@@ -557,9 +529,6 @@ jobs:
               echo '=== Running tests as non-root user ===' && \
               su testuser -c 'pytest tests/e2e/test_service_integration.py -v -s --tb=short'
             "
-          
-          # Connect to RabbitMQ network as well
-          docker network connect ${RABBITMQ_NETWORK} e2e-test-runner
           
           # Start the container and wait for it to finish
           docker start -a e2e-test-runner
