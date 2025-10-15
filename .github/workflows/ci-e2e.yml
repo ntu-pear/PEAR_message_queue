@@ -452,6 +452,10 @@ jobs:
           echo "SQL Server network: ${SQLSERVER_NETWORK}"
           echo "RabbitMQ network: ${RABBITMQ_NETWORK}"
           
+          # Give services a bit more time to fully start
+          echo "Waiting for services to be fully ready..."
+          sleep 10
+          
           # Clean up any existing test container
           docker rm -f e2e-test-runner 2>/dev/null || true
           
@@ -487,7 +491,11 @@ jobs:
               apt-get update -qq && \
               ACCEPT_EULA=Y apt-get install -y -qq msodbcsql18 unixodbc-dev && \
               pip3 install --quiet --no-cache-dir pytest pytest-asyncio pika pyodbc python-dotenv requests && \
-              pytest tests/e2e/test_service_integration.py -v --tb=short
+              echo '=== Verifying connectivity to services ===' && \
+              curl -f http://patient-service:8000/health || echo 'Patient service not reachable' && \
+              curl -f http://scheduler-service:8000/health || echo 'Scheduler service not reachable' && \
+              echo '=== Running tests ===' && \
+              pytest tests/e2e/test_service_integration.py -v -s --tb=short
             "
           
           # Connect to RabbitMQ network as well
