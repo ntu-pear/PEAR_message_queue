@@ -441,6 +441,52 @@ jobs:
           
           echo "All services are running!"
 
+      - name: Debug Scheduler Service
+        run: |
+          echo "========================================"
+          echo "=== SCHEDULER SERVICE DEBUG INFO ==="
+          echo "========================================"
+          
+          echo "\n--- Container Status ---"
+          docker ps -a | grep scheduler-service
+          
+          echo "\n--- Container Inspect (Network & Env) ---"
+          docker inspect scheduler-service --format='{{json .NetworkSettings.Networks}}' | python3 -m json.tool
+          
+          echo "\n--- Environment Variables ---"
+          docker exec scheduler-service env | grep -E '(RABBITMQ|DB_)' | sort
+          
+          echo "\n--- Full Scheduler Service Logs (Last 100 lines) ---"
+          docker logs scheduler-service --tail 100
+          
+          echo "\n--- Network Connectivity Test from Scheduler ---"
+          echo "Testing connection to RabbitMQ..."
+          docker exec scheduler-service sh -c 'apt-get update -qq && apt-get install -y -qq netcat-openbsd curl' 2>/dev/null || true
+          docker exec scheduler-service nc -zv rabbitmq 5672 2>&1 || echo "Cannot connect to RabbitMQ on port 5672"
+          
+          echo "\n--- RabbitMQ Status ---"
+          docker exec rabbitmq rabbitmqctl status | head -20
+          
+          echo "\n--- RabbitMQ Vhosts ---"
+          docker exec rabbitmq rabbitmqctl list_vhosts
+          
+          echo "\n--- RabbitMQ Users ---"
+          docker exec rabbitmq rabbitmqctl list_users
+          
+          echo "\n--- RabbitMQ Permissions on vhost ---"
+          docker exec rabbitmq rabbitmqctl list_permissions -p ${RABBITMQ_VHOST}
+          
+          echo "\n--- RabbitMQ Connections ---"
+          docker exec rabbitmq rabbitmqctl list_connections
+          
+          echo "\n--- Trying to access Scheduler health endpoint ---"
+          curl -v http://localhost:8002/health 2>&1 || echo "Health endpoint not accessible"
+          
+          echo "\n--- Scheduler Service detailed logs with timestamps ---"
+          docker logs scheduler-service --timestamps --tail 50
+          
+          echo "========================================"
+
       - name: Run E2E integration tests in Docker container
         run: |
           echo "Running E2E integration tests in Docker container with ODBC drivers..."
