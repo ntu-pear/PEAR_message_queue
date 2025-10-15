@@ -25,15 +25,30 @@ RETRY_INTERVAL = 2  # seconds between retries
 
 def get_db_connection(database_name: str):
     """Create a database connection"""
-    connection_string = (
-        f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-        f"SERVER={DB_SERVER},{DB_PORT};"
-        f"DATABASE={database_name};"
-        f"UID={DB_USERNAME};"
-        f"PWD={DB_PASSWORD};"
-        f"TrustServerCertificate=yes;"
-    )
-    return pyodbc.connect(connection_string)
+    # Try different ODBC driver versions
+    drivers = [
+        "ODBC Driver 17 for SQL Server",
+        "ODBC Driver 18 for SQL Server",
+        "FreeTDS"
+    ]
+    
+    for driver in drivers:
+        try:
+            connection_string = (
+                f"DRIVER={{{driver}}};"
+                f"SERVER={DB_SERVER},{DB_PORT};"
+                f"DATABASE={database_name};"
+                f"UID={DB_USERNAME};"
+                f"PWD={DB_PASSWORD};"
+                f"TrustServerCertificate=yes;"
+            )
+            return pyodbc.connect(connection_string)
+        except pyodbc.Error:
+            continue
+    
+    # If all drivers fail, raise error with helpful message
+    raise Exception(f"Could not connect to database. Tried drivers: {drivers}. "
+                   f"Available drivers: {pyodbc.drivers()}")
 
 
 def check_service_available(url, timeout=5):
@@ -69,6 +84,8 @@ require_services = pytest.mark.skipif(
 
 def get_patient_from_scheduler_db(patient_id: int) -> Optional[dict]:
     """Query the REF_PATIENT table directly in Scheduler database"""
+    conn = None
+    cursor = None
     try:
         conn = get_db_connection(SCHEDULER_DB_NAME)
         cursor = conn.cursor()
@@ -85,7 +102,7 @@ def get_patient_from_scheduler_db(patient_id: int) -> Optional[dict]:
         row = cursor.fetchone()
         
         if row:
-            return {
+            result = {
                 'PatientID': row.PatientID,
                 'Name': row.Name,
                 'PreferredName': row.PreferredName,
@@ -99,14 +116,19 @@ def get_patient_from_scheduler_db(patient_id: int) -> Optional[dict]:
                 'CreatedById': row.CreatedById,
                 'ModifiedById': row.ModifiedById
             }
+        else:
+            result = None
         
-        cursor.close()
-        conn.close()
-        return None
+        return result
         
     except Exception as e:
         print(f"Error querying scheduler database: {e}")
         return None
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 
 @pytest.mark.e2e
