@@ -466,10 +466,9 @@ jobs:
           echo "Running container as UID:GID = ${USER_ID}:${GROUP_ID}"
           
           # Use Python image with ODBC drivers
-          # Create the test container connected to SQL Server network
+          # Create the test container connected to SQL Server network (AS ROOT for setup)
           docker create \
             --name e2e-test-runner \
-            --user ${USER_ID}:${GROUP_ID} \
             --network ${SQLSERVER_NETWORK} \
             -v $(pwd):/workspace \
             -w /workspace \
@@ -488,21 +487,29 @@ jobs:
             -e PATIENT_DB_NAME=${PATIENT_DB_NAME} \
             -e SCHEDULER_DB_NAME=${SCHEDULER_DB_NAME} \
             -e DEBIAN_FRONTEND=noninteractive \
+            -e USER_ID=${USER_ID} \
+            -e GROUP_ID=${GROUP_ID} \
             python:3.11-slim \
             bash -c "
               set -e && \
+              echo '=== Installing system dependencies as root ===' && \
               apt-get update -qq && \
               apt-get install -y -qq curl gnupg2 apt-transport-https ca-certificates && \
               curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg && \
               curl -fsSL https://packages.microsoft.com/config/debian/12/prod.list | tee /etc/apt/sources.list.d/mssql-release.list > /dev/null && \
               apt-get update -qq && \
               ACCEPT_EULA=Y apt-get install -y -qq msodbcsql18 unixodbc-dev && \
+              echo '=== Installing Python packages ===' && \
               pip3 install --quiet --no-cache-dir pytest pytest-asyncio pika pyodbc python-dotenv requests && \
               echo '=== Verifying connectivity to services ===' && \
               curl -f http://patient-service:8000/health || echo 'Patient service not reachable' && \
               curl -f http://scheduler-service:8000/health || echo 'Scheduler service not reachable' && \
-              echo '=== Running tests ===' && \
-              pytest tests/e2e/test_service_integration.py -v -s --tb=short
+              echo '=== Creating non-root user for test execution ===' && \
+              groupadd -g \${GROUP_ID} testuser 2>/dev/null || true && \
+              useradd -u \${USER_ID} -g \${GROUP_ID} -m testuser 2>/dev/null || true && \
+              chown -R \${USER_ID}:\${GROUP_ID} /workspace && \
+              echo '=== Running tests as non-root user ===' && \
+              su testuser -c 'pytest tests/e2e/test_service_integration.py -v -s --tb=short'
             "
           
           # Connect to RabbitMQ network as well
