@@ -451,25 +451,59 @@ jobs:
           
           echo "All services are running!"
 
-      - name: Run E2E integration tests
+      - name: Run E2E integration tests in Docker container
         run: |
-          echo "Running E2E integration tests..."
-          pytest tests/e2e/ -v --tb=short
-        env:
-          RABBITMQ_HOST: localhost
-          RABBITMQ_PORT: ${{ env.RABBITMQ_PORT }}
-          RABBITMQ_USER: ${{ env.RABBITMQ_USER }}
-          RABBITMQ_PASSWORD: ${{ env.RABBITMQ_PASSWORD }}
-          RABBITMQ_VHOST: ${{ env.RABBITMQ_VHOST }}
-          ACTIVITY_SERVICE_URL: http://localhost:8001
-          PATIENT_SERVICE_URL: http://localhost:8003
-          SCHEDULER_SERVICE_URL: http://localhost:8002
-          DB_SERVER: sqlserver
-          DB_PORT: ${{ env.DB_PORT }}
-          DB_USERNAME: ${{ env.DB_USERNAME }}
-          DB_PASSWORD: ${{ env.DB_PASSWORD }}
-          PATIENT_DB_NAME: ${{ env.PATIENT_DB_NAME }}
-          SCHEDULER_DB_NAME: ${{ env.SCHEDULER_DB_NAME }}
+          echo "Running E2E integration tests in Docker container with ODBC drivers..."
+          
+          # Get the networks
+          SQLSERVER_NETWORK=${{ job.services.sqlserver.network }}
+          RABBITMQ_NETWORK="${{ steps.get-network.outputs.network }}"
+          
+          echo "SQL Server network: ${SQLSERVER_NETWORK}"
+          echo "RabbitMQ network: ${RABBITMQ_NETWORK}"
+          
+          # Create the test container connected to SQL Server network
+          docker create \
+            --name e2e-test-runner \
+            --network ${SQLSERVER_NETWORK} \
+            -v $(pwd):/workspace \
+            -w /workspace \
+            -e RABBITMQ_HOST=rabbitmq \
+            -e RABBITMQ_PORT=${RABBITMQ_PORT} \
+            -e RABBITMQ_USER=${RABBITMQ_USER} \
+            -e RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD} \
+            -e RABBITMQ_VHOST=${RABBITMQ_VHOST} \
+            -e ACTIVITY_SERVICE_URL=http://activity-service:8000 \
+            -e PATIENT_SERVICE_URL=http://patient-service:8000 \
+            -e SCHEDULER_SERVICE_URL=http://scheduler-service:8000 \
+            -e DB_SERVER=sqlserver \
+            -e DB_PORT=1433 \
+            -e DB_USERNAME=${DB_USERNAME} \
+            -e DB_PASSWORD=${DB_PASSWORD} \
+            -e PATIENT_DB_NAME=${PATIENT_DB_NAME} \
+            -e SCHEDULER_DB_NAME=${SCHEDULER_DB_NAME} \
+            mcr.microsoft.com/mssql-tools:latest \
+            bash -c "
+              apt-get update -qq && \
+              apt-get install -y -qq python3 python3-pip && \
+              pip3 install --quiet pytest pytest-asyncio pika pyodbc python-dotenv requests && \
+              pytest tests/e2e/test_service_integration.py -v --tb=short
+            "
+          
+          # Connect to RabbitMQ network as well
+          docker network connect ${RABBITMQ_NETWORK} e2e-test-runner
+          
+          # Start the container and wait for it to finish
+          docker start -a e2e-test-runner
+          
+          # Store exit code
+          TEST_EXIT_CODE=$?
+          
+          # Cleanup
+          docker rm e2e-test-runner 2>/dev/null || true
+          
+          # Exit with test result
+          exit $TEST_EXIT_CODE
 
       - name: Show service logs on failure
         if: failure()
