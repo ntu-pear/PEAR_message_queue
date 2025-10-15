@@ -218,6 +218,16 @@ jobs:
           docker exec rabbitmq rabbitmqctl set_permissions -p ${RABBITMQ_VHOST} ${RABBITMQ_USER} ".*" ".*" ".*"
           
           echo "RabbitMQ is fully configured and ready"
+          
+          # Create required queues for the Scheduler Service
+          echo "Creating RabbitMQ queues for messaging..."
+          docker exec rabbitmq rabbitmqadmin -V ${RABBITMQ_VHOST} -u ${RABBITMQ_USER} -p ${RABBITMQ_PASSWORD} declare queue name=scheduler.patient.created durable=true || true
+          docker exec rabbitmq rabbitmqadmin -V ${RABBITMQ_VHOST} -u ${RABBITMQ_USER} -p ${RABBITMQ_PASSWORD} declare queue name=scheduler.activity.centre_activity.created durable=true || true
+          docker exec rabbitmq rabbitmqadmin -V ${RABBITMQ_VHOST} -u ${RABBITMQ_USER} -p ${RABBITMQ_PASSWORD} declare queue name=scheduler.activity.preference.created durable=true || true
+          docker exec rabbitmq rabbitmqadmin -V ${RABBITMQ_VHOST} -u ${RABBITMQ_USER} -p ${RABBITMQ_PASSWORD} declare queue name=scheduler.activity.recommendation.created durable=true || true
+          docker exec rabbitmq rabbitmqadmin -V ${RABBITMQ_VHOST} -u ${RABBITMQ_USER} -p ${RABBITMQ_PASSWORD} declare queue name=reconciliation.drift.detected durable=true || true
+          
+          echo "RabbitMQ queues created successfully"
 
       - name: Start Activity Service
         run: |
