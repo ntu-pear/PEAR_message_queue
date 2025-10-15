@@ -366,7 +366,7 @@ jobs:
           docker run -d \
             --name scheduler-service \
             --network ${SQLSERVER_NETWORK} \
-            -p 8002:8000 \
+            -p 8002:3000 \
             --env-file scheduler.env \
             ${SCHEDULER_SERVICE_IMAGE}
           
@@ -377,7 +377,7 @@ jobs:
           # Wait for Scheduler Service to be accessible on internal network
           echo "Verifying Scheduler Service is accessible on internal network..."
           for i in {1..30}; do
-            if docker run --rm --network ${SQLSERVER_NETWORK} curlimages/curl:latest curl -f -m 5 http://scheduler-service:8000/health 2>/dev/null; then
+            if docker run --rm --network ${SQLSERVER_NETWORK} curlimages/curl:latest curl -f -m 5 http://scheduler-service:3000/health 2>/dev/null; then
               echo "Scheduler Service is healthy and accessible on internal network!"
               break
             fi
@@ -526,7 +526,7 @@ jobs:
             -e RABBITMQ_VHOST=${RABBITMQ_VHOST} \
             -e ACTIVITY_SERVICE_URL=http://activity-service:8000 \
             -e PATIENT_SERVICE_URL=http://patient-service:8000 \
-            -e SCHEDULER_SERVICE_URL=http://scheduler-service:8000 \
+            -e SCHEDULER_SERVICE_URL=http://scheduler-service:3000 \
             -e DB_SERVER=sqlserver \
             -e DB_PORT=1433 \
             -e DB_USERNAME=${DB_USERNAME} \
@@ -550,7 +550,7 @@ jobs:
               pip3 install --quiet --no-cache-dir pytest pytest-asyncio pika pyodbc python-dotenv requests && \
               echo '=== Verifying connectivity to services ===' && \
               curl -f http://patient-service:8000/health || echo 'Patient service not reachable' && \
-              curl -f http://scheduler-service:8000/health || echo 'Scheduler service not reachable' && \
+              curl -f http://scheduler-service:3000/health || echo 'Scheduler service not reachable' && \
               echo '=== Creating non-root user for test execution ===' && \
               groupadd -g \${GROUP_ID} testuser 2>/dev/null || true && \
               useradd -u \${USER_ID} -g \${GROUP_ID} -m testuser 2>/dev/null || true && \
