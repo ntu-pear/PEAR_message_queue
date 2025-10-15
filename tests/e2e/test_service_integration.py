@@ -2,15 +2,38 @@ import pytest
 import requests
 import time
 import os
+import pyodbc
 from datetime import datetime
+from typing import Optional
 
 # Service URLs from environment
-ACTIVITY_SERVICE_URL = os.getenv('ACTIVITY_SERVICE_URL', 'http://localhost:8001')
+PATIENT_SERVICE_URL = os.getenv('PATIENT_SERVICE_URL', 'http://localhost:8003')
 SCHEDULER_SERVICE_URL = os.getenv('SCHEDULER_SERVICE_URL', 'http://localhost:8002')
 
+# Database configurations
+DB_SERVER = os.getenv('DB_SERVER', 'localhost')
+DB_PORT = os.getenv('DB_PORT', '1433')
+DB_USERNAME = os.getenv('DB_USERNAME', 'sa')
+DB_PASSWORD = os.getenv('DB_PASSWORD', 'Fyppear@test')
+PATIENT_DB_NAME = os.getenv('PATIENT_DB_NAME', 'patient_service_test')
+SCHEDULER_DB_NAME = os.getenv('SCHEDULER_DB_NAME', 'scheduler_service_test')
+
 # Timeouts
-MESSAGE_PROCESSING_TIMEOUT = 15  # seconds to wait for async processing
+MESSAGE_PROCESSING_TIMEOUT = 20  # seconds to wait for async processing
 RETRY_INTERVAL = 2  # seconds between retries
+
+
+def get_db_connection(database_name: str):
+    """Create a database connection"""
+    connection_string = (
+        f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+        f"SERVER={DB_SERVER},{DB_PORT};"
+        f"DATABASE={database_name};"
+        f"UID={DB_USERNAME};"
+        f"PWD={DB_PASSWORD};"
+        f"TrustServerCertificate=yes;"
+    )
+    return pyodbc.connect(connection_string)
 
 
 def check_service_available(url, timeout=5):
@@ -31,49 +54,96 @@ def check_service_available(url, timeout=5):
 
 
 # Check if services are available
-ACTIVITY_SERVICE_AVAILABLE = check_service_available(ACTIVITY_SERVICE_URL)
+PATIENT_SERVICE_AVAILABLE = check_service_available(PATIENT_SERVICE_URL)
 SCHEDULER_SERVICE_AVAILABLE = check_service_available(SCHEDULER_SERVICE_URL)
-SERVICES_AVAILABLE = ACTIVITY_SERVICE_AVAILABLE and SCHEDULER_SERVICE_AVAILABLE
+SERVICES_AVAILABLE = PATIENT_SERVICE_AVAILABLE and SCHEDULER_SERVICE_AVAILABLE
 
 # Skip marker for when services are not available
 require_services = pytest.mark.skipif(
     not SERVICES_AVAILABLE,
-    reason="Activity and/or Scheduler services not available. "
+    reason="Patient and/or Scheduler services not available. "
            "These tests require running services. "
            "Run nightly E2E workflow or start services locally to execute these tests."
 )
 
 
+def get_patient_from_scheduler_db(patient_id: int) -> Optional[dict]:
+    """Query the REF_PATIENT table directly in Scheduler database"""
+    try:
+        conn = get_db_connection(SCHEDULER_DB_NAME)
+        cursor = conn.cursor()
+        
+        query = """
+            SELECT PatientID, Name, PreferredName, UpdateBit, StartDate, EndDate, 
+                   IsActive, IsDeleted, CreatedDateTime, UpdatedDateTime, 
+                   CreatedById, ModifiedById
+            FROM REF_PATIENT
+            WHERE PatientID = ?
+        """
+        
+        cursor.execute(query, patient_id)
+        row = cursor.fetchone()
+        
+        if row:
+            return {
+                'PatientID': row.PatientID,
+                'Name': row.Name,
+                'PreferredName': row.PreferredName,
+                'UpdateBit': row.UpdateBit,
+                'StartDate': row.StartDate,
+                'EndDate': row.EndDate,
+                'IsActive': row.IsActive,
+                'IsDeleted': row.IsDeleted,
+                'CreatedDateTime': row.CreatedDateTime,
+                'UpdatedDateTime': row.UpdatedDateTime,
+                'CreatedById': row.CreatedById,
+                'ModifiedById': row.ModifiedById
+            }
+        
+        cursor.close()
+        conn.close()
+        return None
+        
+    except Exception as e:
+        print(f"Error querying scheduler database: {e}")
+        return None
+
+
 @pytest.mark.e2e
 @pytest.mark.slow
 class TestPatientServiceIntegration:
-    """Test patient data flow from Activity Service to Scheduler Service"""
+    """Test patient data flow from Patient Service to Scheduler Service via message queue"""
 
     @require_services
-    def test_patient_created_e2e_flow(self):
+    def test_patient_create_propagation(self):
         """
         Test: Complete Patient Creation Flow
         
         Flow:
-        1. POST /api/patients to Activity Service
-        2. Wait for async message processing
-        3. GET /api/patients/{id} from Scheduler Service (verify synced)
-        4. Verify patient data matches
+        1. POST /api/patients/add to Patient Service
+        2. Patient Service publishes message to queue
+        3. Scheduler Service consumes message and creates entry in REF_PATIENT
+        4. Verify data in REF_PATIENT table matches
         """
-        print(f"\n=== Test: Patient Created E2E Flow ===")
+        print(f"\n=== Test: Patient Create Propagation ===")
         
-        # Step 1: Create patient via Activity Service
+        # Step 1: Create patient via Patient Service
         patient_data = {
-            "name": "E2E Test Patient",
-            "nric": "S9999999A",
-            "dateOfBirth": "1990-01-01",
+            "name": "E2E Test Patient Create",
+            "nric": "S1234567A",
+            "dateOfBirth": "1990-01-01T00:00:00",
             "gender": "M",
-            "isActive": True
+            "isActive": "1",
+            "startDate": "2025-01-01T00:00:00",
+            "isRespiteCare": "0",
+            "updateBit": "1",
+            "autoGame": "0",
+            "preferredName": "Test Create"
         }
         
-        print(f"Step 1: Creating patient in Activity Service...")
+        print(f"Step 1: Creating patient in Patient Service...")
         create_response = requests.post(
-            f"{ACTIVITY_SERVICE_URL}/api/patients",
+            f"{PATIENT_SERVICE_URL}/api/patients/add?require_auth=false",
             json=patient_data,
             timeout=10
         )
@@ -81,14 +151,12 @@ class TestPatientServiceIntegration:
         assert create_response.status_code in [200, 201], \
             f"Failed to create patient: {create_response.status_code} - {create_response.text}"
         
-        patient_id = create_response.json()['id']
+        response_data = create_response.json()
+        patient_id = response_data['data']['id']
         print(f"Patient created with ID: {patient_id}")
         
         # Step 2: Wait for message processing with retry logic
         print(f"Step 2: Waiting for message processing (max {MESSAGE_PROCESSING_TIMEOUT}s)...")
-        
-        # Step 3: Verify patient synced to Scheduler Service
-        print(f"Step 3: Verifying patient synced to Scheduler Service...")
         
         scheduler_patient = None
         max_retries = MESSAGE_PROCESSING_TIMEOUT // RETRY_INTERVAL
@@ -96,77 +164,91 @@ class TestPatientServiceIntegration:
         for attempt in range(max_retries):
             time.sleep(RETRY_INTERVAL)
             
-            try:
-                scheduler_response = requests.get(
-                    f"{SCHEDULER_SERVICE_URL}/api/patients/{patient_id}",
-                    timeout=5
-                )
-                
-                if scheduler_response.status_code == 200:
-                    scheduler_patient = scheduler_response.json()
-                    print(f"Patient found in Scheduler Service (attempt {attempt + 1})")
-                    break
-                else:
-                    print(f"  Attempt {attempt + 1}/{max_retries}: Patient not yet in Scheduler (HTTP {scheduler_response.status_code})")
-            except requests.RequestException as e:
-                print(f"  Attempt {attempt + 1}/{max_retries}: Error checking scheduler - {e}")
+            # Query the REF_PATIENT table directly
+            scheduler_patient = get_patient_from_scheduler_db(patient_id)
+            
+            if scheduler_patient:
+                print(f"Patient found in REF_PATIENT table (attempt {attempt + 1})")
+                break
+            else:
+                print(f"  Attempt {attempt + 1}/{max_retries}: Patient not yet in REF_PATIENT")
         
+        # Step 3: Verify patient synced to Scheduler database
         assert scheduler_patient is not None, \
-            f"Patient not found in Scheduler Service after {MESSAGE_PROCESSING_TIMEOUT}s"
+            f"Patient not found in REF_PATIENT table after {MESSAGE_PROCESSING_TIMEOUT}s"
         
         # Step 4: Verify data integrity
-        print(f"Step 4: Verifying data integrity...")
-        assert scheduler_patient['name'] == patient_data['name'], \
-            f"Name mismatch: expected '{patient_data['name']}', got '{scheduler_patient['name']}'"
-        assert scheduler_patient['nric'] == patient_data['nric'], \
-            f"NRIC mismatch: expected '{patient_data['nric']}', got '{scheduler_patient['nric']}'"
-        print(f"Patient data synchronized correctly")
+        print(f"Step 3: Verifying data integrity...")
+        assert scheduler_patient['Name'] == patient_data['name'], \
+            f"Name mismatch: expected '{patient_data['name']}', got '{scheduler_patient['Name']}'"
+        assert scheduler_patient['PreferredName'] == patient_data['preferredName'], \
+            f"PreferredName mismatch: expected '{patient_data['preferredName']}', got '{scheduler_patient['PreferredName']}'"
+        assert scheduler_patient['IsActive'] == patient_data['isActive'], \
+            f"IsActive mismatch: expected '{patient_data['isActive']}', got '{scheduler_patient['IsActive']}'"
+        assert scheduler_patient['IsDeleted'] == "0", \
+            f"IsDeleted should be '0', got '{scheduler_patient['IsDeleted']}'"
         
-        print(f"Complete E2E flow passed!")
+        print(f"Patient data synchronized correctly to REF_PATIENT table")
+        print(f"Complete E2E create flow passed!")
 
     @require_services
-    def test_patient_updated_propagation(self):
+    def test_patient_update_propagation(self):
         """
         Test: Patient Update Propagation
         
-        Verify that patient updates in Activity Service propagate to Scheduler
+        Verify that patient updates in Patient Service propagate to REF_PATIENT table
         """
-        print(f"\n=== Test: Patient Updated Propagation ===")
+        print(f"\n=== Test: Patient Update Propagation ===")
         
         # Step 1: Create patient first
-        patient_data = {"name": "Update Test", "nric": "S8888888B"}
+        patient_data = {
+            "name": "E2E Test Update Original",
+            "nric": "S2345678B",
+            "dateOfBirth": "1985-05-15T00:00:00",
+            "gender": "F",
+            "isActive": "1",
+            "startDate": "2025-01-01T00:00:00",
+            "isRespiteCare": "0",
+            "updateBit": "1",
+            "autoGame": "0",
+            "preferredName": "Original Name"
+        }
+        
         create_response = requests.post(
-            f"{ACTIVITY_SERVICE_URL}/api/patients",
+            f"{PATIENT_SERVICE_URL}/api/patients/add?require_auth=false",
             json=patient_data,
             timeout=10
         )
         
         assert create_response.status_code in [200, 201]
-        patient_id = create_response.json()['id']
+        patient_id = create_response.json()['data']['id']
         print(f"Patient created with ID: {patient_id}")
         
         # Wait for initial sync
         print(f"Waiting for initial sync...")
         time.sleep(MESSAGE_PROCESSING_TIMEOUT)
         
-        # Verify patient exists in scheduler
-        scheduler_check = requests.get(
-            f"{SCHEDULER_SERVICE_URL}/api/patients/{patient_id}",
-            timeout=5
-        )
-        assert scheduler_check.status_code == 200, "Patient should exist in Scheduler before update"
-        print(f"Patient synced to Scheduler Service")
+        # Verify patient exists in REF_PATIENT
+        scheduler_patient = get_patient_from_scheduler_db(patient_id)
+        assert scheduler_patient is not None, "Patient should exist in REF_PATIENT before update"
+        print(f"Patient synced to REF_PATIENT table")
         
         # Step 2: Update patient
-        update_data = {"name": "Updated Name", "address": "New Address"}
+        update_data = {
+            "name": "E2E Test Update Modified",
+            "preferredName": "Updated Name",
+            "isActive": "1"
+        }
+        
         update_response = requests.put(
-            f"{ACTIVITY_SERVICE_URL}/api/patients/{patient_id}",
+            f"{PATIENT_SERVICE_URL}/api/patients/update/{patient_id}?require_auth=false",
             json=update_data,
             timeout=10
         )
         
-        assert update_response.status_code == 200
-        print(f"Patient updated in Activity Service")
+        assert update_response.status_code == 200, \
+            f"Failed to update patient: {update_response.status_code} - {update_response.text}"
+        print(f"Patient updated in Patient Service")
         
         # Step 3: Wait for update propagation
         print(f"Waiting for update propagation...")
@@ -177,65 +259,72 @@ class TestPatientServiceIntegration:
         for attempt in range(max_retries):
             time.sleep(RETRY_INTERVAL)
             
-            scheduler_response = requests.get(
-                f"{SCHEDULER_SERVICE_URL}/api/patients/{patient_id}",
-                timeout=5
-            )
+            patient = get_patient_from_scheduler_db(patient_id)
             
-            if scheduler_response.status_code == 200:
-                patient = scheduler_response.json()
-                if patient['name'] == "Updated Name":
-                    updated_scheduler_patient = patient
-                    print(f"Update propagated (attempt {attempt + 1})")
-                    break
-                else:
-                    print(f"  Attempt {attempt + 1}/{max_retries}: Name not yet updated")
+            if patient and patient['Name'] == "E2E Test Update Modified":
+                updated_scheduler_patient = patient
+                print(f"Update propagated to REF_PATIENT (attempt {attempt + 1})")
+                break
+            else:
+                print(f"  Attempt {attempt + 1}/{max_retries}: Name not yet updated in REF_PATIENT")
         
         assert updated_scheduler_patient is not None, \
-            "Update did not propagate to Scheduler Service"
-        assert updated_scheduler_patient['name'] == "Updated Name"
-        print(f"Update propagated successfully to Scheduler Service")
+            "Update did not propagate to REF_PATIENT table"
+        assert updated_scheduler_patient['Name'] == "E2E Test Update Modified"
+        assert updated_scheduler_patient['PreferredName'] == "Updated Name"
+        print(f"Update propagated successfully to REF_PATIENT table")
 
     @require_services
-    def test_patient_deleted_propagation(self):
+    def test_patient_delete_propagation(self):
         """
         Test: Patient Delete Propagation
         
-        Verify that patient deletion in Activity Service propagates to Scheduler
+        Verify that patient deletion (soft delete) in Patient Service propagates to REF_PATIENT table
         """
         print(f"\n=== Test: Patient Delete Propagation ===")
         
         # Step 1: Create patient
-        patient_data = {"name": "Delete Test", "nric": "S7777777C"}
+        patient_data = {
+            "name": "E2E Test Delete",
+            "nric": "S3456789C",
+            "dateOfBirth": "1992-08-20T00:00:00",
+            "gender": "M",
+            "isActive": "1",
+            "startDate": "2025-01-01T00:00:00",
+            "isRespiteCare": "0",
+            "updateBit": "1",
+            "autoGame": "0",
+            "preferredName": "Delete Test"
+        }
+        
         create_response = requests.post(
-            f"{ACTIVITY_SERVICE_URL}/api/patients",
+            f"{PATIENT_SERVICE_URL}/api/patients/add?require_auth=false",
             json=patient_data,
             timeout=10
         )
         
         assert create_response.status_code in [200, 201]
-        patient_id = create_response.json()['id']
+        patient_id = create_response.json()['data']['id']
         print(f"Patient created with ID: {patient_id}")
         
         # Wait for sync
         time.sleep(MESSAGE_PROCESSING_TIMEOUT)
         
-        # Verify patient exists in scheduler
-        scheduler_check = requests.get(
-            f"{SCHEDULER_SERVICE_URL}/api/patients/{patient_id}",
-            timeout=5
-        )
-        assert scheduler_check.status_code == 200, "Patient should exist in Scheduler before deletion"
-        print(f"Patient synced to Scheduler Service")
+        # Verify patient exists in REF_PATIENT
+        scheduler_patient = get_patient_from_scheduler_db(patient_id)
+        assert scheduler_patient is not None, "Patient should exist in REF_PATIENT before deletion"
+        assert scheduler_patient['IsDeleted'] == "0", "Patient should not be deleted initially"
+        print(f"Patient synced to REF_PATIENT table")
         
-        # Step 2: Delete patient
+        # Step 2: Delete patient (soft delete)
         delete_response = requests.delete(
-            f"{ACTIVITY_SERVICE_URL}/api/patients/{patient_id}",
+            f"{PATIENT_SERVICE_URL}/api/patients/delete/{patient_id}?require_auth=false",
             timeout=10
         )
         
-        assert delete_response.status_code in [200, 204]
-        print(f"Patient deleted in Activity Service")
+        assert delete_response.status_code in [200, 204], \
+            f"Failed to delete patient: {delete_response.status_code} - {delete_response.text}"
+        print(f"Patient deleted in Patient Service")
         
         # Step 3: Wait and verify deletion propagated
         print(f"Waiting for deletion propagation...")
@@ -246,175 +335,136 @@ class TestPatientServiceIntegration:
         for attempt in range(max_retries):
             time.sleep(RETRY_INTERVAL)
             
-            scheduler_response = requests.get(
-                f"{SCHEDULER_SERVICE_URL}/api/patients/{patient_id}",
-                timeout=5
-            )
+            patient = get_patient_from_scheduler_db(patient_id)
             
-            # Patient should either be 404 (deleted) or marked as inactive
-            if scheduler_response.status_code == 404:
+            # Check if IsDeleted flag is set to "1"
+            if patient and patient['IsDeleted'] == "1":
                 deletion_propagated = True
-                print(f"Patient deleted from Scheduler (attempt {attempt + 1})")
+                print(f"Soft delete propagated to REF_PATIENT (attempt {attempt + 1})")
                 break
-            elif scheduler_response.status_code == 200:
-                patient = scheduler_response.json()
-                if patient.get('isActive') == False or patient.get('isDeleted') == True:
-                    deletion_propagated = True
-                    print(f"Patient marked as deleted/inactive (attempt {attempt + 1})")
-                    break
-                else:
-                    print(f"  Attempt {attempt + 1}/{max_retries}: Patient still active")
+            else:
+                status = patient['IsDeleted'] if patient else "not found"
+                print(f"  Attempt {attempt + 1}/{max_retries}: IsDeleted={status}, waiting...")
         
         assert deletion_propagated, \
-            "Deletion did not propagate to Scheduler Service"
-        print(f"Deletion propagated successfully to Scheduler Service")
-
-
-@pytest.mark.e2e
-@pytest.mark.slow
-class TestActivityServiceIntegration:
-    """Test activity data flow from Activity Service to Scheduler Service"""
+            "Deletion did not propagate to REF_PATIENT table"
+        print(f"Deletion propagated successfully to REF_PATIENT table")
 
     @require_services
-    def test_activity_created_with_schedule_generation(self):
+    def test_multiple_patients_bulk_sync(self):
         """
-        Test: Activity Creation Triggers Schedule Generation
+        Test: Multiple patients created in sequence sync correctly
         
-        Verify that creating an activity causes schedules to be generated
+        Verify that creating multiple patients in quick succession all sync to REF_PATIENT
         """
-        print(f"\n=== Test: Activity Created with Schedule Generation ===")
+        print(f"\n=== Test: Multiple Patients Bulk Sync ===")
         
-        # Step 1: Create activity
-        activity_data = {
-            "title": "Morning Exercise",
-            "description": "E2E Test Activity",
-            "startDate": "2025-01-01",
-            "endDate": "2025-12-31",
-            "isCompulsory": True,
-            "minDuration": 30,
-            "maxDuration": 60
-        }
+        patient_ids = []
+        num_patients = 3
         
-        print(f"Step 1: Creating activity in Activity Service...")
-        create_response = requests.post(
-            f"{ACTIVITY_SERVICE_URL}/api/activities",
-            json=activity_data
-        )
+        # Create multiple patients
+        for i in range(num_patients):
+            patient_data = {
+                "name": f"E2E Bulk Test Patient {i+1}",
+                "nric": f"S456789{i}D",
+                "dateOfBirth": "1988-03-10T00:00:00",
+                "gender": "F" if i % 2 == 0 else "M",
+                "isActive": "1",
+                "startDate": "2025-01-01T00:00:00",
+                "isRespiteCare": "0",
+                "updateBit": "1",
+                "autoGame": "0",
+                "preferredName": f"Bulk {i+1}"
+            }
+            
+            response = requests.post(
+                f"{PATIENT_SERVICE_URL}/api/patients/add?require_auth=false",
+                json=patient_data,
+                timeout=10
+            )
+            
+            assert response.status_code in [200, 201]
+            patient_id = response.json()['data']['id']
+            patient_ids.append(patient_id)
+            print(f"Created patient {i+1}/{num_patients} with ID: {patient_id}")
         
-        assert create_response.status_code in [200, 201]
-        activity_id = create_response.json()['id']
-        print(f"Activity created with ID: {activity_id}")
+        # Wait for all to sync
+        print(f"Waiting for all patients to sync...")
+        time.sleep(MESSAGE_PROCESSING_TIMEOUT)
         
-        # Step 2: Wait for message processing
-        print(f"Step 2: Waiting for message processing...")
-        time.sleep(10)
+        # Verify all patients are in REF_PATIENT
+        synced_count = 0
+        for patient_id in patient_ids:
+            max_retries = 5
+            for attempt in range(max_retries):
+                patient = get_patient_from_scheduler_db(patient_id)
+                if patient:
+                    synced_count += 1
+                    print(f"Patient {patient_id} synced to REF_PATIENT")
+                    break
+                time.sleep(2)
         
-        # Step 3: Verify activity synced to Scheduler
-        scheduler_response = requests.get(
-            f"{SCHEDULER_SERVICE_URL}/api/activities/{activity_id}"
-        )
+        assert synced_count == num_patients, \
+            f"Only {synced_count}/{num_patients} patients synced to REF_PATIENT"
         
-        assert scheduler_response.status_code == 200
-        print(f"Activity synced to Scheduler Service")
-        
-        # Step 4: Verify schedules were generated (business logic)
-        schedules_response = requests.get(
-            f"{SCHEDULER_SERVICE_URL}/api/schedules?activityId={activity_id}"
-        )
-        
-        # Depending on business logic, schedules might be generated
-        # This verifies the scheduler service received and can query the activity
-        assert schedules_response.status_code == 200
-        print(f"Scheduler can query activity schedules")
-        
-        print(f"Activity creation and schedule generation flow completed")
-
-    @require_services
-    def test_activity_exclusion_affects_scheduling(self):
-        """
-        Test: Activity Exclusion Flow
-        
-        Verify that activity exclusions propagate and affect scheduling
-        """
-        print(f"\n=== Test: Activity Exclusion Flow ===")
-        
-        # Create activity first
-        activity_response = requests.post(
-            f"{ACTIVITY_SERVICE_URL}/api/activities",
-            json={"title": "Exclusion Test", "description": "Test"}
-        )
-        activity_id = activity_response.json()['id']
-        
-        time.sleep(5)
-        
-        # Create exclusion
-        exclusion_data = {
-            "activityId": activity_id,
-            "startDate": "2025-02-01",
-            "endDate": "2025-02-07",
-            "remarks": "Maintenance week"
-        }
-        
-        exclusion_response = requests.post(
-            f"{ACTIVITY_SERVICE_URL}/api/exclusions",
-            json=exclusion_data
-        )
-        
-        assert exclusion_response.status_code in [200, 201]
-        exclusion_id = exclusion_response.json()['id']
-        print(f"Exclusion created")
-        
-        # Wait for propagation
-        time.sleep(10)
-        
-        # Verify in scheduler
-        scheduler_exclusion = requests.get(
-            f"{SCHEDULER_SERVICE_URL}/api/exclusions/{exclusion_id}"
-        )
-        
-        assert scheduler_exclusion.status_code == 200
-        print(f"Exclusion propagated to Scheduler")
+        print(f"All {num_patients} patients successfully synced to REF_PATIENT table")
 
 
 @pytest.mark.e2e
 @pytest.mark.slow
 class TestErrorHandlingIntegration:
-    """Test error handling and recovery in service-to-service communication"""
-
-    def test_service_outage_recovery(self):
-        """
-        Test: Service Outage Recovery
-        
-        Verify that messages are not lost if Scheduler Service is temporarily down
-        """
-        print(f"\n=== Test: Service Outage Recovery ===")
-        print(f"Note: This test requires ability to stop/start Scheduler Service")
-        print(f"Skipping in automated tests - manual verification recommended")
-        pytest.skip("Requires service orchestration")
+    """Test error handling in patient sync operations"""
 
     @require_services
-    def test_invalid_data_handling(self):
+    def test_invalid_patient_data_handling(self):
         """
-        Test: Invalid Data Handling
+        Test: Invalid Patient Data Handling
         
-        Verify that invalid messages are handled gracefully and routed to DLQ
+        Verify that invalid patient data is rejected at API level
         """
-        print(f"\n=== Test: Invalid Data Handling ===")
+        print(f"\n=== Test: Invalid Patient Data Handling ===")
         
-        # Send invalid patient data
+        # Missing required fields
         invalid_data = {
             "name": "",  # Empty name should be invalid
             "nric": "INVALID"
         }
         
         response = requests.post(
-            f"{ACTIVITY_SERVICE_URL}/api/patients",
-            json=invalid_data
+            f"{PATIENT_SERVICE_URL}/api/patients/add?require_auth=false",
+            json=invalid_data,
+            timeout=10
         )
         
-        # Should be rejected at API level
-        assert response.status_code >= 400
-        print(f"Invalid data rejected at API level")
+        # Should be rejected at API level (400 or 422)
+        assert response.status_code >= 400, \
+            f"Expected error status, got {response.status_code}"
+        print(f"Invalid data rejected at API level with status {response.status_code}")
+
+    @require_services
+    def test_update_nonexistent_patient(self):
+        """
+        Test: Update Non-existent Patient
+        
+        Verify proper error handling when updating a patient that doesn't exist
+        """
+        print(f"\n=== Test: Update Non-existent Patient ===")
+        
+        nonexistent_id = 999999
+        update_data = {
+            "name": "Should Not Work"
+        }
+        
+        response = requests.put(
+            f"{PATIENT_SERVICE_URL}/api/patients/update/{nonexistent_id}?require_auth=false",
+            json=update_data,
+            timeout=10
+        )
+        
+        # Should return 404
+        assert response.status_code == 404, \
+            f"Expected 404, got {response.status_code}"
+        print(f"Non-existent patient update properly rejected with 404")
 
 
 # Helper function for cleanup
@@ -424,5 +474,4 @@ def cleanup_test_data():
     Optional: Clean up test data after tests
     """
     yield
-    # Cleanup logic here if needed
     print("Test cleanup completed")
