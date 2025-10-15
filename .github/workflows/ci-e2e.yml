@@ -219,19 +219,16 @@ jobs:
           
           echo "RabbitMQ is fully configured and ready"
           
-          # Create required queues for the Scheduler Service
-          echo "Creating RabbitMQ queues for messaging..."
-          
           # Import queue definitions from definitions.yaml
           echo "Importing RabbitMQ configuration from definitions.yaml..."
           docker cp definitions.yaml rabbitmq:/tmp/definitions.yaml
           docker exec rabbitmq rabbitmqctl import_definitions /tmp/definitions.yaml
           
           echo "RabbitMQ topology (exchanges, queues, bindings) imported successfully"
-          # Reconciliation/drift detection
-          docker exec rabbitmq rabbitmqadmin -V ${RABBITMQ_VHOST} -u ${RABBITMQ_USER} -p ${RABBITMQ_PASSWORD} declare queue name=reconciliation.drift.detected durable=true || true
           
-          echo "RabbitMQ queues created successfully"
+          # Verify queues were created
+          echo "Verifying queue creation (showing first 20 queues)..."
+          docker exec rabbitmq rabbitmqctl list_queues -p ${RABBITMQ_VHOST} name messages | head -20
 
       - name: Start Activity Service
         run: |
@@ -376,6 +373,24 @@ jobs:
           echo "Scheduler Service started on network: ${SQLSERVER_NETWORK}"
           echo "Waiting for Scheduler Service to initialize (may take longer on first run)..."
           sleep 30
+          
+          # Wait for Scheduler Service to be accessible on internal network
+          echo "Verifying Scheduler Service is accessible on internal network..."
+          for i in {1..30}; do
+            if docker run --rm --network ${SQLSERVER_NETWORK} curlimages/curl:latest curl -f -m 5 http://scheduler-service:8000/health 2>/dev/null; then
+              echo "Scheduler Service is healthy and accessible on internal network!"
+              break
+            fi
+            echo "Waiting for Scheduler Service internal accessibility... ($i/30)"
+            if [ $i -eq 30 ]; then
+              echo "ERROR: Scheduler Service not accessible after 30 attempts"
+              echo "Checking if health endpoint works locally inside container..."
+              docker exec scheduler-service curl -f http://localhost:8000/health 2>&1 || echo "Even localhost health check failed"
+              echo "Scheduler Service logs:"
+              docker logs scheduler-service --tail 50
+            fi
+            sleep 2
+          done
 
       - name: Verify all services are running
         run: |
