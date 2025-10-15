@@ -452,6 +452,9 @@ jobs:
           echo "SQL Server network: ${SQLSERVER_NETWORK}"
           echo "RabbitMQ network: ${RABBITMQ_NETWORK}"
           
+          # Clean up any existing test container
+          docker rm -f e2e-test-runner 2>/dev/null || true
+          
           # Use Python image with ODBC drivers
           # Create the test container connected to SQL Server network
           docker create \
