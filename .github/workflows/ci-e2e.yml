@@ -459,10 +459,17 @@ jobs:
           # Clean up any existing test container
           docker rm -f e2e-test-runner 2>/dev/null || true
           
+          # Get current user ID and group ID to run container as non-root
+          USER_ID=$(id -u)
+          GROUP_ID=$(id -g)
+          
+          echo "Running container as UID:GID = ${USER_ID}:${GROUP_ID}"
+          
           # Use Python image with ODBC drivers
           # Create the test container connected to SQL Server network
           docker create \
             --name e2e-test-runner \
+            --user ${USER_ID}:${GROUP_ID} \
             --network ${SQLSERVER_NETWORK} \
             -v $(pwd):/workspace \
             -w /workspace \
