@@ -1,0 +1,193 @@
+name: CI - Infrastructure Tests
+
+on:
+  push:
+    branches: [ main, staging ]
+  pull_request:
+    branches: [ main, staging ]
+  workflow_dispatch:
+
+env:
+  # Staging images
+  RABBITMQ_IMAGE: '192.168.188.184:5000/rabbitmq_service_dev:latest'
+  
+  # Database configurations
+  DB_SERVER: 'sqlserver'
+  DB_PORT: 1433
+  DB_USERNAME: 'sa'
+  DB_PASSWORD: 'Fyppear@test'
+  ACTIVITY_DB_NAME: 'activity_service_test'
+  SCHEDULER_DB_NAME: 'scheduler_service_test'
+  
+  # RabbitMQ configurations
+  RABBITMQ_HOST: 'rabbitmq'
+  RABBITMQ_PORT: 5672
+  RABBITMQ_MANAGEMENT_PORT: 15672
+  RABBITMQ_VHOST: 'vhost'
+  RABBITMQ_USER: 'admin'
+  RABBITMQ_PASSWORD: 'pear2025'
+
+jobs:
+  infrastructure-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      # SQL Server for databases
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: 'Y'
+          SA_PASSWORD: 'Fyppear@test'
+          MSSQL_PID: 'Developer'
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd="/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Fyppear@test -Q 'SELECT 1' || exit 1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-asyncio pika pyodbc python-dotenv requests
+
+      - name: Wait for SQL Server to be ready
+        run: |
+          echo "Waiting for SQL Server to be fully ready..."
+          for i in {1..30}; do
+            if docker exec ${{ job.services.sqlserver.id }} /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Fyppear@test -Q "SELECT 1" > /dev/null 2>&1; then
+              echo "SQL Server is ready!"
+              break
+            fi
+            echo "Waiting for SQL Server... ($i/30)"
+            sleep 2
+          done
+
+      - name: Create test databases
+        run: |
+          # Create Activity Service database
+          docker exec ${{ job.services.sqlserver.id }} /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Fyppear@test -Q "
+          IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = '${ACTIVITY_DB_NAME}')
+          BEGIN
+            CREATE DATABASE ${ACTIVITY_DB_NAME};
+          END"
+          
+          # Create Scheduler Service database  
+          docker exec ${{ job.services.sqlserver.id }} /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Fyppear@test -Q "
+          IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = '${SCHEDULER_DB_NAME}')
+          BEGIN
+            CREATE DATABASE ${SCHEDULER_DB_NAME};
+          END"
+          
+          echo "Test databases created successfully"
+          echo "Note: Database schemas will be initialized by the services on startup"
+
+      - name: Pull and start RabbitMQ container
+        run: |
+          # Pull RabbitMQ image
+          docker pull ${RABBITMQ_IMAGE} || docker pull rabbitmq:4.1.1-management
+          
+          # Start RabbitMQ container
+          docker run -d \
+            --name rabbitmq \
+            --network ${{ job.services.sqlserver.network }} \
+            -p 5672:5672 \
+            -p 15672:15672 \
+            -e RABBITMQ_DEFAULT_USER=${RABBITMQ_USER} \
+            -e RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD} \
+            -e RABBITMQ_DEFAULT_VHOST=${RABBITMQ_VHOST} \
+            ${RABBITMQ_IMAGE} || docker run -d \
+            --name rabbitmq \
+            --network ${{ job.services.sqlserver.network }} \
+            -p 5672:5672 \
+            -p 15672:15672 \
+            -e RABBITMQ_DEFAULT_USER=${RABBITMQ_USER} \
+            -e RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD} \
+            -e RABBITMQ_DEFAULT_VHOST=${RABBITMQ_VHOST} \
+            rabbitmq:4.1.1-management
+          
+          echo "Waiting for RabbitMQ to be ready..."
+          sleep 15
+          
+          # Check RabbitMQ health
+          for i in {1..30}; do
+            if curl -s -u ${RABBITMQ_USER}:${RABBITMQ_PASSWORD} http://localhost:${RABBITMQ_MANAGEMENT_PORT}/api/health/checks/alarms > /dev/null 2>&1; then
+              echo "RabbitMQ is ready!"
+              break
+            fi
+            echo "Waiting for RabbitMQ... ($i/30)"
+            sleep 2
+          done
+
+      - name: Load RabbitMQ definitions
+        run: |
+          echo "Loading RabbitMQ definitions..."
+          
+          # Copy definitions file to container
+          docker cp ./definitions.yaml rabbitmq:/tmp/definitions.yaml
+          
+          # Import definitions using rabbitmqadmin
+          docker exec rabbitmq rabbitmqctl import_definitions /tmp/definitions.yaml
+          
+          echo "RabbitMQ definitions loaded successfully"
+
+      - name: Verify all services are running
+        run: |
+          echo "=== Service Health Check ==="
+          echo "SQL Server: $(docker ps --filter id=${{ job.services.sqlserver.id }} --format '{{.Status}}')"
+          echo "RabbitMQ: $(docker ps --filter name=rabbitmq --format '{{.Status}}')"
+          
+          # Check RabbitMQ Management UI
+          curl -u ${RABBITMQ_USER}:${RABBITMQ_PASSWORD} http://localhost:${RABBITMQ_MANAGEMENT_PORT}/api/overview
+          
+          echo "All services are running!"
+
+      - name: Run Infrastructure Tests Only
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          DB_SERVER: localhost
+          RABBITMQ_HOST: localhost
+        run: |
+          echo "Running infrastructure tests (excluding service integration tests)..."
+          pytest tests/e2e/ -v --tb=short --capture=no -m "not slow"
+        continue-on-error: false
+
+      - name: Display service logs on failure
+        if: failure()
+        run: |
+          echo "=== RabbitMQ Logs ==="
+          docker logs rabbitmq --tail 100
+          
+          echo "=== SQL Server Logs ==="
+          docker logs ${{ job.services.sqlserver.id }} --tail 100
+
+      - name: Cleanup
+        if: always()
+        run: |
+          echo "Cleaning up containers..."
+          docker stop rabbitmq || true
+          docker rm rabbitmq || true
+          
+          echo "Cleanup completed"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: infrastructure-test-results
+          path: |
+            tests/e2e/*.log
+            pytest-results.xml
+          retention-days: 7
