@@ -706,6 +706,45 @@
       }
     },
     {
+      "name": "activity.patient.created",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.activity.patient",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "activity.patient.updated",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.activity.patient",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "activity.patient.deleted",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.activity.patient",
+        "x-delivery-limit": 3
+      }
+    },
+    {
       "name": "dlq.patient.medication",
       "vhost": "vhost",
       "durable": true,
@@ -728,6 +767,13 @@
     },
     {
       "name": "dlq.scheduler.patient",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+        {
+      "name": "dlq.activity.patient",
       "vhost": "vhost",
       "durable": true,
       "auto_delete": false,
@@ -1045,6 +1091,30 @@
     {
       "source": "patient.updates",
       "vhost": "vhost",
+      "destination": "activity.patient.created",
+      "destination_type": "queue",
+      "routing_key": "patient.created.*",
+      "arguments": {}
+    },
+    {
+      "source": "patient.updates",
+      "vhost": "vhost",
+      "destination": "activity.patient.updated",
+      "destination_type": "queue",
+      "routing_key": "patient.updated.*",
+      "arguments": {}
+    },
+    {
+      "source": "patient.updates",
+      "vhost": "vhost",
+      "destination": "activity.patient.deleted",
+      "destination_type": "queue",
+      "routing_key": "patient.deleted.*",
+      "arguments": {}
+    },
+    {
+      "source": "patient.updates",
+      "vhost": "vhost",
       "destination": "scheduler.patient.medication.created",
       "destination_type": "queue",
       "routing_key": "patient.medication.created.*",
@@ -1248,6 +1318,14 @@
       "destination": "dlq.scheduler.patient",
       "destination_type": "queue",
       "routing_key": "failed.scheduler.patient",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost",
+      "destination": "dlq.activity.patient",
+      "destination_type": "queue",
+      "routing_key": "failed.activity.patient",
       "arguments": {}
     },
     {
