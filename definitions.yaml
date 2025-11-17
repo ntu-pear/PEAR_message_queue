@@ -744,6 +744,45 @@
         "x-delivery-limit": 3
       }
     },
+        {
+      "name": "activity.patient.allocation.created",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.activity.patient.allocation",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "activity.patient.allocation.updated",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.activity.patient.allocation",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "activity.patient.allocation.deleted",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.activity.patient.allocation",
+        "x-delivery-limit": 3
+      }
+    },
     {
       "name": "dlq.patient.medication",
       "vhost": "vhost",
@@ -772,8 +811,15 @@
       "auto_delete": false,
       "arguments": { "x-queue-type": "classic" }
     },
-        {
+    {
       "name": "dlq.activity.patient",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "dlq.activity.patient.allocation",
       "vhost": "vhost",
       "durable": true,
       "auto_delete": false,
@@ -1112,6 +1158,30 @@
       "routing_key": "patient.deleted.*",
       "arguments": {}
     },
+        {
+      "source": "patient.updates",
+      "vhost": "vhost",
+      "destination": "activity.patient.allocation.created",
+      "destination_type": "queue",
+      "routing_key": "patient.allocation.created.*",
+      "arguments": {}
+    },
+    {
+      "source": "patient.updates",
+      "vhost": "vhost",
+      "destination": "activity.patient.allocation.updated",
+      "destination_type": "queue",
+      "routing_key": "patient.allocation.updated.*",
+      "arguments": {}
+    },
+    {
+      "source": "patient.updates",
+      "vhost": "vhost",
+      "destination": "activity.patient.allocation.deleted",
+      "destination_type": "queue",
+      "routing_key": "patient.allocation.deleted.*",
+      "arguments": {}
+    },
     {
       "source": "patient.updates",
       "vhost": "vhost",
@@ -1326,6 +1396,14 @@
       "destination": "dlq.activity.patient",
       "destination_type": "queue",
       "routing_key": "failed.activity.patient",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost",
+      "destination": "dlq.activity.patient.allocation",
+      "destination_type": "queue",
+      "routing_key": "failed.activity.patient.allocation",
       "arguments": {}
     },
     {
