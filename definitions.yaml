@@ -915,6 +915,52 @@
       "durable": true,
       "auto_delete": false,
       "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "dlq.scheduler.patient.allocation",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "scheduler.patient.allocation.created",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.patient.allocation",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "scheduler.patient.allocation.updated",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.patient.allocation",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "scheduler.patient.allocation.deleted",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.patient.allocation",
+        "x-delivery-limit": 3
+      }
     }
   ],
   "bindings": [
@@ -1204,6 +1250,30 @@
       "destination": "scheduler.patient.medication.deleted",
       "destination_type": "queue",
       "routing_key": "patient.medication.deleted.*",
+      "arguments": {}
+    },
+    {
+      "source": "patient.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.patient.allocation.created",
+      "destination_type": "queue",
+      "routing_key": "patient.allocation.created.*",
+      "arguments": {}
+    },
+    {
+      "source": "patient.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.patient.allocation.updated",
+      "destination_type": "queue",
+      "routing_key": "patient.allocation.updated.*",
+      "arguments": {}
+    },
+    {
+      "source": "patient.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.patient.allocation.deleted",
+      "destination_type": "queue",
+      "routing_key": "patient.allocation.deleted.*",
       "arguments": {}
     },
     {
@@ -1500,6 +1570,14 @@
       "destination": "dlq.scheduler.activity.recommendation",
       "destination_type": "queue",
       "routing_key": "failed.scheduler.activity.recommendation",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost",
+      "destination": "dlq.scheduler.patient.allocation",
+      "destination_type": "queue",
+      "routing_key": "failed.scheduler.patient.allocation",
       "arguments": {}
     },
     {
