@@ -933,14 +933,14 @@
       "arguments": { "x-queue-type": "classic" }
     },
     {
-      "name":"dlq.user.patient",
+      "name":"dlq.patient.user",
       "vhost": "vhost",
       "durable": true,
       "auto_delete": false,
       "arguments": { "x-queue-type": "classic" }
     },
     {
-      "name": "user.patient.config.created",
+      "name": "patient.user.config.created",
       "vhost": "vhost",
       "durable": true,
       "auto_delete": false,
@@ -948,13 +948,13 @@
         "x-queue-type": "quorum",
         "x-message-ttl": 300000,
         "x-dead-letter-exchange": "system.dlx",
-        "x-dead-letter-routing-key": "failed.user.patient",
+        "x-dead-letter-routing-key": "failed.patient.user",
         "x-delivery-limit": 3
       }
     },
 
     {
-      "name": "user.patient.config.updated",
+      "name": "patient.user.config.updated",
       "vhost": "vhost",
       "durable": true,
       "auto_delete": false,
@@ -962,7 +962,7 @@
         "x-queue-type": "quorum",
         "x-message-ttl": 300000,
         "x-dead-letter-exchange": "system.dlx",
-        "x-dead-letter-routing-key": "failed.user.patient",
+        "x-dead-letter-routing-key": "failed.patient.user",
         "x-delivery-limit": 3
       }
     },
@@ -1466,16 +1466,16 @@
     {
       "source" : "user.updates",
       "vhost": "vhost",
-      "destination": "user.patient.config.created",
+      "destination": "patient.user.config.created",
       "destination_type": "queue",
-      "routing_key": "user.patient.config.created.*",
+      "routing_key": "patient.user.config.created.*",
     },
     {
       "source" : "user.updates",
       "vhost": "vhost",
-      "destination": "user.patient.config.updated",
+      "destination": "patient.user.config.updated",
       "destination_type": "queue",
-      "routing_key": "user.patient.config.updated.*",
+      "routing_key": "patient.user.config.updated.*",
     },
     {
       "source": "reconciliation.events",
@@ -1640,9 +1640,9 @@
     {
       "source": "system.dlx",
       "vhost": "vhost",
-      "destination": "dlq.user.patient",
+      "destination": "dlq.patient.user",
       "destination_type": "queue",
-      "routing_key": "failed.user.patient",
+      "routing_key": "failed.patient.user",
       "arguments": {}
     },
     {
