@@ -49,6 +49,15 @@
       "arguments": {}
     },
     {
+      "name": "user.updates",
+      "vhost": "vhost",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
       "name": "reconciliation.events",
       "vhost": "vhost",
       "type": "topic",
@@ -924,6 +933,40 @@
       "arguments": { "x-queue-type": "classic" }
     },
     {
+      "name":"dlq.patient.user",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "patient.user.config.created",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.patient.user",
+        "x-delivery-limit": 3
+      }
+    },
+
+    {
+      "name": "patient.user.config.updated",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.patient.user",
+        "x-delivery-limit": 3
+      }
+    },
+    {
       "name": "scheduler.patient.allocation.created",
       "vhost": "vhost",
       "durable": true,
@@ -1421,6 +1464,22 @@
       "arguments": {}
     },
     {
+      "source" : "user.updates",
+      "vhost": "vhost",
+      "destination": "patient.user.config.created",
+      "destination_type": "queue",
+      "routing_key": "patient.user.config.created.*",
+      "arguments": {}
+    },
+    {
+      "source" : "user.updates",
+      "vhost": "vhost",
+      "destination": "patient.user.config.updated",
+      "destination_type": "queue",
+      "routing_key": "patient.user.config.updated.*",
+      "arguments": {}
+    },
+    {
       "source": "reconciliation.events",
       "vhost": "vhost",
       "destination": "reconciliation.drift.detected",
@@ -1578,6 +1637,14 @@
       "destination": "dlq.scheduler.patient.allocation",
       "destination_type": "queue",
       "routing_key": "failed.scheduler.patient.allocation",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost",
+      "destination": "dlq.patient.user",
+      "destination_type": "queue",
+      "routing_key": "failed.patient.user",
       "arguments": {}
     },
     {
