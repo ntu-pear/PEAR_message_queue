@@ -205,6 +205,7 @@ class TestDeadLetterQueue:
             "dlq.scheduler.activity.preference",
             "dlq.activity.recommendation",
             "dlq.scheduler.activity.recommendation",
+            "dlq.scheduler.activity.adhoc",
             "dlq.reconciliation.drift"
         ]
         

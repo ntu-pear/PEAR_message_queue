@@ -702,6 +702,45 @@
       }
     },
     {
+      "name": "scheduler.activity.adhoc.created",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.activity.adhoc",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "scheduler.activity.adhoc.updated",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.activity.adhoc",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "scheduler.activity.adhoc.deleted",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.activity.adhoc",
+        "x-delivery-limit": 3
+      }
+    },
+    {
       "name": "reconciliation.drift.detected",
       "vhost": "vhost",
       "durable": true,
@@ -913,6 +952,13 @@
     },
     {
       "name": "dlq.scheduler.activity.recommendation",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "dlq.scheduler.activity.adhoc",
       "vhost": "vhost",
       "durable": true,
       "auto_delete": false,
@@ -1464,6 +1510,30 @@
       "arguments": {}
     },
     {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.activity.adhoc.created",
+      "destination_type": "queue",
+      "routing_key": "activity.adhoc.created.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.activity.adhoc.updated",
+      "destination_type": "queue",
+      "routing_key": "activity.adhoc.updated.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.activity.adhoc.deleted",
+      "destination_type": "queue",
+      "routing_key": "activity.adhoc.deleted.*",
+      "arguments": {}
+    },
+    {
       "source" : "user.updates",
       "vhost": "vhost",
       "destination": "patient.user.config.created",
@@ -1625,10 +1695,18 @@
     },
     {
       "source": "system.dlx",
-      "vhost": "vhost", 
+      "vhost": "vhost",
       "destination": "dlq.scheduler.activity.recommendation",
       "destination_type": "queue",
       "routing_key": "failed.scheduler.activity.recommendation",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost",
+      "destination": "dlq.scheduler.activity.adhoc",
+      "destination_type": "queue",
+      "routing_key": "failed.scheduler.activity.adhoc",
       "arguments": {}
     },
     {

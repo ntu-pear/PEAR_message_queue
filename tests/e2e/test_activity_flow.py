@@ -388,5 +388,228 @@ class TestActivityMessageFlow:
         received = json.loads(body.decode())
         assert received['routine_id'] == routine_id
         assert received['recurrence_pattern'] == "daily"
-        
+
         print(f"Activity routine message flow completed successfully")
+
+
+@pytest.mark.e2e
+class TestAdhocMessageFlow:
+    """
+    Test adhoc message flow through the system.
+
+    Adhoc events travel one way: the activity service outbox publishes onto
+    activity.updates, and the scheduler queues are the only consumers.
+    """
+
+    ADHOC_QUEUES = [
+        "scheduler.activity.adhoc.created",
+        "scheduler.activity.adhoc.updated",
+        "scheduler.activity.adhoc.deleted",
+    ]
+
+    def _purge_adhoc_queues(self, channel):
+        """Adhoc queues are not in the conftest purge list, so clear them here."""
+        for queue in self.ADHOC_QUEUES:
+            try:
+                channel.queue_purge(queue)
+            except Exception:
+                pass
+
+    def _envelope(self, payload):
+        """
+        Match the wrapper RabbitMQClient.publish puts around every message.
+        The scheduler consumer reads message["data"], so the shape matters.
+        """
+        return {
+            "timestamp": datetime.utcnow().isoformat(),
+            "source_service": "activity-service",
+            "data": payload,
+        }
+
+    def _publish(self, channel, routing_key, payload):
+        channel.basic_publish(
+            exchange="activity.updates",
+            routing_key=routing_key,
+            body=json.dumps(self._envelope(payload)),
+            properties=pika.BasicProperties(
+                content_type='application/json',
+                delivery_mode=2
+            )
+        )
+
+    def _get_message(self, channel, queue):
+        method_frame, _, body = channel.basic_get(queue=queue, auto_ack=True)
+        assert method_frame is not None, f"No message arrived on {queue}"
+        return json.loads(body.decode())
+
+    def test_adhoc_created_flow(self, rabbitmq_channel):
+        """
+        Test: Adhoc Created Message Flow
+
+        Steps:
+        1. Publish activity.adhoc.created message
+        2. Verify routing to scheduler.activity.adhoc.created queue
+        """
+        self._purge_adhoc_queues(rabbitmq_channel)
+
+        adhoc_id = 801
+        payload = {
+            "event_type": "ADHOC_CREATED",
+            "adhoc_id": adhoc_id,
+            "adhoc_data": {
+                "id": adhoc_id,
+                "patient_id": 12361,
+                "old_centre_activity_id": 2,
+                "new_centre_activity_id": 3,
+                "status": "PENDING",
+                "start_date": datetime.utcnow().isoformat(),
+                "end_date": (datetime.utcnow() + timedelta(days=1)).isoformat(),
+                "is_deleted": False,
+            },
+            "created_by": "test-user",
+            "correlation_id": f"E2E-ADHOC-CREATED-{adhoc_id}",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+        print(f"\n=== Test: Adhoc Created Message Flow ===")
+        print(f"Adhoc ID: {adhoc_id}")
+
+        self._publish(rabbitmq_channel, f"activity.adhoc.created.{adhoc_id}", payload)
+        print(f"Published adhoc created message")
+        time.sleep(2)
+
+        received = self._get_message(rabbitmq_channel, "scheduler.activity.adhoc.created")
+        data = received["data"]
+        assert data["adhoc_id"] == adhoc_id
+        assert data["event_type"] == "ADHOC_CREATED"
+        # Fields the scheduler's adhoc mapper treats as required
+        assert data["adhoc_data"]["id"] == adhoc_id
+        assert data["adhoc_data"]["patient_id"] == 12361
+        assert data["adhoc_data"]["old_centre_activity_id"] == 2
+        assert data["adhoc_data"]["new_centre_activity_id"] == 3
+
+        print(f"Adhoc created message flow completed successfully")
+
+    def test_adhoc_updated_flow(self, rabbitmq_channel):
+        """
+        Test: Adhoc Updated Message Flow
+
+        The scheduler applies the new state from adhoc_data.
+        """
+        self._purge_adhoc_queues(rabbitmq_channel)
+
+        adhoc_id = 802
+        payload = {
+            "event_type": "ADHOC_UPDATED",
+            "adhoc_id": adhoc_id,
+            "adhoc_data": {
+                "id": adhoc_id,
+                "patient_id": 12362,
+                "old_centre_activity_id": 2,
+                "new_centre_activity_id": 3,
+                "status": "APPROVED",
+                "is_deleted": False,
+            },
+            "old_data": {"status": "PENDING"},
+            "changes": {"status": {"old": "PENDING", "new": "APPROVED"}},
+            "modified_by": "test-user",
+            "correlation_id": f"E2E-ADHOC-UPDATED-{adhoc_id}",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+        print(f"\n=== Test: Adhoc Updated Message Flow ===")
+
+        self._publish(rabbitmq_channel, f"activity.adhoc.updated.{adhoc_id}", payload)
+        print(f"Published adhoc updated message")
+        time.sleep(2)
+
+        received = self._get_message(rabbitmq_channel, "scheduler.activity.adhoc.updated")
+        data = received["data"]
+        assert data["adhoc_id"] == adhoc_id
+        assert data["adhoc_data"]["status"] == "APPROVED"
+        assert data["changes"]["status"]["new"] == "APPROVED"
+
+        print(f"Adhoc updated message flow completed successfully")
+
+    def test_adhoc_deleted_flow(self, rabbitmq_channel):
+        """
+        Test: Adhoc Deleted Message Flow
+
+        The scheduler's delete handler reads the timestamp without a fallback,
+        so it must survive the round trip.
+        """
+        self._purge_adhoc_queues(rabbitmq_channel)
+
+        adhoc_id = 803
+        payload = {
+            "event_type": "ADHOC_DELETED",
+            "adhoc_id": adhoc_id,
+            "adhoc_data": {
+                "id": adhoc_id,
+                "patient_id": 12363,
+                "old_centre_activity_id": 2,
+                "new_centre_activity_id": 3,
+                "status": "APPROVED",
+                "is_deleted": True,
+            },
+            "deleted_by": "test-user",
+            "correlation_id": f"E2E-ADHOC-DELETED-{adhoc_id}",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+        print(f"\n=== Test: Adhoc Deleted Message Flow ===")
+
+        self._publish(rabbitmq_channel, f"activity.adhoc.deleted.{adhoc_id}", payload)
+        print(f"Published adhoc deleted message")
+        time.sleep(2)
+
+        received = self._get_message(rabbitmq_channel, "scheduler.activity.adhoc.deleted")
+        data = received["data"]
+        assert data["adhoc_id"] == adhoc_id
+        assert data["adhoc_data"]["is_deleted"] is True
+        assert data["timestamp"]
+
+        print(f"Adhoc deleted message flow completed successfully")
+
+    def test_adhoc_routing_keys_do_not_cross_queues(self, rabbitmq_channel):
+        """
+        Test: Adhoc Binding Isolation
+
+        A created event must not land in the updated or deleted queues.
+        Guards against copy-paste errors in the three adhoc bindings.
+        """
+        self._purge_adhoc_queues(rabbitmq_channel)
+
+        adhoc_id = 804
+        payload = {
+            "event_type": "ADHOC_CREATED",
+            "adhoc_id": adhoc_id,
+            "adhoc_data": {
+                "id": adhoc_id,
+                "patient_id": 12364,
+                "old_centre_activity_id": 2,
+                "new_centre_activity_id": 3,
+            },
+            "correlation_id": f"E2E-ADHOC-ISOLATION-{adhoc_id}",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+        print(f"\n=== Test: Adhoc Binding Isolation ===")
+
+        self._publish(rabbitmq_channel, f"activity.adhoc.created.{adhoc_id}", payload)
+        time.sleep(2)
+
+        wrong_queues = [
+            "scheduler.activity.adhoc.updated",
+            "scheduler.activity.adhoc.deleted",
+        ]
+        for queue in wrong_queues:
+            method_frame, _, _ = rabbitmq_channel.basic_get(queue=queue, auto_ack=True)
+            assert method_frame is None, f"Created event leaked into {queue}"
+            print(f"  No leak into {queue}")
+
+        # And it did reach the queue it belongs to
+        received = self._get_message(rabbitmq_channel, "scheduler.activity.adhoc.created")
+        assert received["data"]["adhoc_id"] == adhoc_id
+
+        print(f"Adhoc binding isolation verified")

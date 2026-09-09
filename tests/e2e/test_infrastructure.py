@@ -100,7 +100,10 @@ class TestRabbitMQInfrastructure:
             "scheduler.activity.preference.deleted",
             "scheduler.activity.recommendation.created",
             "scheduler.activity.recommendation.updated",
-            "scheduler.activity.recommendation.deleted"
+            "scheduler.activity.recommendation.deleted",
+            "scheduler.activity.adhoc.created",
+            "scheduler.activity.adhoc.updated",
+            "scheduler.activity.adhoc.deleted"
         ]
         
         missing_queues = []
