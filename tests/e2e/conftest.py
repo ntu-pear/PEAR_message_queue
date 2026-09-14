@@ -71,7 +71,13 @@ def rabbitmq_channel(rabbitmq_connection):
         'scheduler.patient.updated',
         'scheduler.patient.deleted',
         'activity.created',
-        'scheduler.activity.created'
+        'scheduler.activity.created',
+        'activity.routine.created',
+        'activity.routine.updated',
+        'activity.routine.deleted',
+        'scheduler.activity.routine.created',
+        'scheduler.activity.routine.updated',
+        'scheduler.activity.routine.deleted'
     ]
     
     for queue in test_queues:

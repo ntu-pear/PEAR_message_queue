@@ -210,7 +210,12 @@ Comprehensive end-to-end tests covering:
    - DLQ routing
    - Message persistence
 
-4. **Infrastructure** (`test_infrastructure.py`)
+4. **Routine Service Integration** (`test_routine_service_integration.py`)
+   - Activity Service routine creation, update, and soft deletion
+   - Routine event propagation through RabbitMQ
+   - Scheduler `REF_ACTIVITY_ROUTINE` synchronization
+
+5. **Infrastructure** (`test_infrastructure.py`)
    - Exchange configuration
    - Queue configuration
    - Connection management
@@ -388,6 +393,7 @@ PEAR_message_queue/
 │   │   ├── conftest.py
 │   │   ├── test_patient_flow.py
 │   │   ├── test_activity_flow.py
+│   │   ├── test_routine_service_integration.py
 │   │   ├── test_dlq.py
 │   │   ├── test_infrastructure.py
 │   │   └── README.md
@@ -433,6 +439,9 @@ PEAR_message_queue/
 - `DB_SERVER`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`
 - `RABBITMQ_HOST`, `RABBITMQ_PORT`, `RABBITMQ_USER`, `RABBITMQ_PASSWORD`
 - `ACTIVITY_SERVICE_URL`, `SCHEDULER_SERVICE_URL`
+- `PATIENT_SERVICE_URL`
+- `ROUTINE_TEST_PATIENT_ID` (optional existing patient fixture override)
+- `ROUTINE_TEST_AUTH_TOKEN` (optional bearer token for protected staging setups)
 
 ### Adding New Message Types
 
