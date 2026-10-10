@@ -468,6 +468,45 @@
       }
     },
     {
+      "name": "scheduler.activity.centre_activity_availability.created",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.activity.centre_activity_availability",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "scheduler.activity.centre_activity_availability.updated",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.activity.centre_activity_availability",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "scheduler.activity.centre_activity_availability.deleted",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.activity.centre_activity_availability",
+        "x-delivery-limit": 3
+      }
+    },
+    {
       "name": "activity.routine.created",
       "vhost": "vhost",
       "durable": true,
@@ -910,6 +949,13 @@
     },
     {
       "name": "dlq.scheduler.activity.centre_activity_exclusion",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "dlq.scheduler.activity.centre_activity_availability",
       "vhost": "vhost",
       "durable": true,
       "auto_delete": false,
@@ -1440,6 +1486,30 @@
     {
       "source": "activity.updates",
       "vhost": "vhost",
+      "destination": "scheduler.activity.centre_activity_availability.created",
+      "destination_type": "queue",
+      "routing_key": "activity.centre_activity_availability.created.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.activity.centre_activity_availability.updated",
+      "destination_type": "queue",
+      "routing_key": "activity.centre_activity_availability.updated.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.activity.centre_activity_availability.deleted",
+      "destination_type": "queue",
+      "routing_key": "activity.centre_activity_availability.deleted.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
       "destination": "scheduler.activity.routine.created",
       "destination_type": "queue",
       "routing_key": "activity.routine.created.*",
@@ -1651,6 +1721,14 @@
       "destination": "dlq.scheduler.activity.centre_activity_exclusion",
       "destination_type": "queue",
       "routing_key": "failed.scheduler.activity.centre_activity_exclusion",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost",
+      "destination": "dlq.scheduler.activity.centre_activity_availability",
+      "destination_type": "queue",
+      "routing_key": "failed.scheduler.activity.centre_activity_availability",
       "arguments": {}
     },
     {
