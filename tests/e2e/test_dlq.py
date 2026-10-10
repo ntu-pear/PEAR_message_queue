@@ -199,6 +199,7 @@ class TestDeadLetterQueue:
             "dlq.scheduler.activity.centre_activity",
             "dlq.activity.centre_activity_exclusion",
             "dlq.scheduler.activity.centre_activity_exclusion",
+            "dlq.scheduler.activity.centre_activity_availability",
             "dlq.activity.routine",
             "dlq.scheduler.activity.routine",
             "dlq.activity.preference",

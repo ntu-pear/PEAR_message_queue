@@ -72,7 +72,7 @@ All exchanges are **topic exchanges** for flexible routing:
 
 - **`activity.updates`** - Activity-related events
   - Routing pattern: `activity.{entity}.{action}.{id}`
-  - Entities: activity, centre_activity, exclusion, routine, preference, recommendation, adhoc
+  - Entities: activity, centre_activity, exclusion, centre_activity_availability, routine, preference, recommendation, adhoc
 
 - **`reconciliation.events`** - Data reconciliation events
   - Routing pattern: `drift.detected.{entity_type}`
@@ -118,7 +118,6 @@ All queues are configured as **quorum queues** with:
 
 **Scheduler Service Queues:**
 - Mirror all above queues with `scheduler.` prefix
-- `scheduler.activity.adhoc.created` / `updated` / `deleted` (adhoc is scheduler-only; the activity service publishes but does not consume it)
 
 #### Dead Letter Queues (DLQ)
 
@@ -128,6 +127,7 @@ DLQs use **classic queue type** for better inspection:
 - `dlq.activity` / `dlq.scheduler.activity`
 - `dlq.activity.centre_activity` / `dlq.scheduler.activity.centre_activity`
 - `dlq.activity.centre_activity_exclusion` / `dlq.scheduler.activity.centre_activity_exclusion`
+- `dlq.scheduler.activity.centre_activity_availability`
 - `dlq.activity.routine` / `dlq.scheduler.activity.routine`
 - `dlq.activity.preference` / `dlq.scheduler.activity.preference`
 - `dlq.activity.recommendation` / `dlq.scheduler.activity.recommendation`
