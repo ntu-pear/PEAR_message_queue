@@ -75,7 +75,8 @@ All exchanges are **topic exchanges** for flexible routing:
   - Entities: activity, centre_activity, exclusion, centre_activity_availability, routine, preference, recommendation, adhoc
 
 - **`reconciliation.events`** - Data reconciliation events
-  - Routing pattern: `drift.detected.{entity_type}`
+  - Routing pattern: `drift.detected.{owning_service}.{entity_type}.{id}`
+  - Each owning service has its own queue: `reconciliation.drift.activity`, `reconciliation.drift.patient`, `reconciliation.drift.user`
 
 - **`system.dlx`** - Dead letter exchange (direct type)
   - Routes failed messages to appropriate DLQs
@@ -132,7 +133,7 @@ DLQs use **classic queue type** for better inspection:
 - `dlq.activity.preference` / `dlq.scheduler.activity.preference`
 - `dlq.activity.recommendation` / `dlq.scheduler.activity.recommendation`
 - `dlq.scheduler.activity.adhoc`
-- `dlq.reconciliation.drift`
+- `dlq.reconciliation.drift.activity` / `dlq.reconciliation.drift.patient` / `dlq.reconciliation.drift.user`
 
 ### Message Flow Example
 
