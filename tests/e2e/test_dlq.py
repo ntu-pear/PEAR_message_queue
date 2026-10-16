@@ -207,7 +207,9 @@ class TestDeadLetterQueue:
             "dlq.activity.recommendation",
             "dlq.scheduler.activity.recommendation",
             "dlq.scheduler.activity.adhoc",
-            "dlq.reconciliation.drift"
+            "dlq.reconciliation.drift.activity",
+            "dlq.reconciliation.drift.patient",
+            "dlq.reconciliation.drift.user"
         ]
         
         missing_dlqs = []

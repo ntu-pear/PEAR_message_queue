@@ -184,22 +184,35 @@ class TestRabbitMQInfrastructure:
         except pika.exceptions.ChannelClosedByBroker:
             pytest.fail(f"Queue '{queue_name}' does not exist")
 
-    def test_reconciliation_queue_exists(self, rabbitmq_channel):
+    def test_reconciliation_queues_exist(self, rabbitmq_channel):
         """
-        Test: Reconciliation Queue Exists
-        
-        Verify reconciliation drift detection queue exists
+        Test: Reconciliation Queues Exist
+
+        Verify each owning service has its own drift queue, so a drift event
+        is only ever delivered to the service that owns the record
         """
-        print(f"\n=== Test: Reconciliation Queue Exists ===")
-        
-        queue_name = "reconciliation.drift.detected"
-        
-        try:
-            result = rabbitmq_channel.queue_declare(queue=queue_name, passive=True)
-            print(f"Queue '{queue_name}' exists")
-            print(f"  Messages in queue: {result.method.message_count}")
-        except pika.exceptions.ChannelClosedByBroker:
-            pytest.fail(f"Queue '{queue_name}' does not exist")
+        print(f"\n=== Test: Reconciliation Queues Exist ===")
+
+        expected_queues = [
+            "reconciliation.drift.activity",
+            "reconciliation.drift.patient",
+            "reconciliation.drift.user"
+        ]
+
+        missing_queues = []
+
+        for queue_name in expected_queues:
+            try:
+                result = rabbitmq_channel.queue_declare(queue=queue_name, passive=True)
+                print(f"Queue '{queue_name}' exists")
+                print(f"  Messages in queue: {result.method.message_count}")
+            except pika.exceptions.ChannelClosedByBroker:
+                missing_queues.append(queue_name)
+                # Reopen channel after error
+                rabbitmq_channel = rabbitmq_channel.connection.channel()
+
+        if missing_queues:
+            pytest.fail(f"Missing reconciliation queues: {', '.join(missing_queues)}")
 
     def test_connection_heartbeat(self, rabbitmq_connection):
         """

@@ -780,7 +780,7 @@
       }
     },
     {
-      "name": "reconciliation.drift.detected",
+      "name": "reconciliation.drift.activity",
       "vhost": "vhost",
       "durable": true,
       "auto_delete": false,
@@ -788,7 +788,33 @@
         "x-queue-type": "quorum",
         "x-message-ttl": 86400000,
         "x-dead-letter-exchange": "system.dlx",
-        "x-dead-letter-routing-key": "failed.reconciliation.drift",
+        "x-dead-letter-routing-key": "failed.reconciliation.drift.activity",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "reconciliation.drift.patient",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 86400000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.reconciliation.drift.patient",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "reconciliation.drift.user",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 86400000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.reconciliation.drift.user",
         "x-delivery-limit": 3
       }
     },
@@ -1011,7 +1037,21 @@
       "arguments": { "x-queue-type": "classic" }
     },
     {
-      "name": "dlq.reconciliation.drift",
+      "name": "dlq.reconciliation.drift.activity",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "dlq.reconciliation.drift.patient",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "dlq.reconciliation.drift.user",
       "vhost": "vhost",
       "durable": true,
       "auto_delete": false,
@@ -1622,9 +1662,25 @@
     {
       "source": "reconciliation.events",
       "vhost": "vhost",
-      "destination": "reconciliation.drift.detected",
+      "destination": "reconciliation.drift.activity",
       "destination_type": "queue",
-      "routing_key": "drift.detected.#",
+      "routing_key": "drift.detected.activity.#",
+      "arguments": {}
+    },
+    {
+      "source": "reconciliation.events",
+      "vhost": "vhost",
+      "destination": "reconciliation.drift.patient",
+      "destination_type": "queue",
+      "routing_key": "drift.detected.patient.#",
+      "arguments": {}
+    },
+    {
+      "source": "reconciliation.events",
+      "vhost": "vhost",
+      "destination": "reconciliation.drift.user",
+      "destination_type": "queue",
+      "routing_key": "drift.detected.user.#",
       "arguments": {}
     },
     {
@@ -1806,9 +1862,25 @@
     {
       "source": "system.dlx",
       "vhost": "vhost",
-      "destination": "dlq.reconciliation.drift",
+      "destination": "dlq.reconciliation.drift.activity",
       "destination_type": "queue",
-      "routing_key": "failed.reconciliation.drift",
+      "routing_key": "failed.reconciliation.drift.activity",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost",
+      "destination": "dlq.reconciliation.drift.patient",
+      "destination_type": "queue",
+      "routing_key": "failed.reconciliation.drift.patient",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost",
+      "destination": "dlq.reconciliation.drift.user",
+      "destination_type": "queue",
+      "routing_key": "failed.reconciliation.drift.user",
       "arguments": {}
     }
   ]
