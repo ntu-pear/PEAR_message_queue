@@ -556,7 +556,7 @@ jobs:
               useradd -u \${USER_ID} -g \${GROUP_ID} -m testuser 2>/dev/null || true && \
               chown -R \${USER_ID}:\${GROUP_ID} /workspace && \
               echo '=== Running tests as non-root user ===' && \
-              su testuser -c 'pytest tests/e2e/test_service_integration.py -v -s --tb=short'
+              su testuser -c 'pytest tests/e2e/test_service_integration.py tests/e2e/test_routine_service_integration.py -v -s --tb=short'
             "
           
           # Start the container and wait for it to finish
