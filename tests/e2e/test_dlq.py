@@ -199,13 +199,17 @@ class TestDeadLetterQueue:
             "dlq.scheduler.activity.centre_activity",
             "dlq.activity.centre_activity_exclusion",
             "dlq.scheduler.activity.centre_activity_exclusion",
+            "dlq.scheduler.activity.centre_activity_availability",
             "dlq.activity.routine",
             "dlq.scheduler.activity.routine",
             "dlq.activity.preference",
             "dlq.scheduler.activity.preference",
             "dlq.activity.recommendation",
             "dlq.scheduler.activity.recommendation",
-            "dlq.reconciliation.drift"
+            "dlq.scheduler.activity.adhoc",
+            "dlq.reconciliation.drift.activity",
+            "dlq.reconciliation.drift.patient",
+            "dlq.reconciliation.drift.user"
         ]
         
         missing_dlqs = []

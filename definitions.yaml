@@ -49,6 +49,15 @@
       "arguments": {}
     },
     {
+      "name": "user.updates",
+      "vhost": "vhost",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
       "name": "reconciliation.events",
       "vhost": "vhost",
       "type": "topic",
@@ -459,6 +468,45 @@
       }
     },
     {
+      "name": "scheduler.activity.centre_activity_availability.created",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.activity.centre_activity_availability",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "scheduler.activity.centre_activity_availability.updated",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.activity.centre_activity_availability",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "scheduler.activity.centre_activity_availability.deleted",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.activity.centre_activity_availability",
+        "x-delivery-limit": 3
+      }
+    },
+    {
       "name": "activity.routine.created",
       "vhost": "vhost",
       "durable": true,
@@ -693,7 +741,46 @@
       }
     },
     {
-      "name": "reconciliation.drift.detected",
+      "name": "scheduler.activity.adhoc.created",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.activity.adhoc",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "scheduler.activity.adhoc.updated",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.activity.adhoc",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "scheduler.activity.adhoc.deleted",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.scheduler.activity.adhoc",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "reconciliation.drift.activity",
       "vhost": "vhost",
       "durable": true,
       "auto_delete": false,
@@ -701,7 +788,33 @@
         "x-queue-type": "quorum",
         "x-message-ttl": 86400000,
         "x-dead-letter-exchange": "system.dlx",
-        "x-dead-letter-routing-key": "failed.reconciliation.drift",
+        "x-dead-letter-routing-key": "failed.reconciliation.drift.activity",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "reconciliation.drift.patient",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 86400000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.reconciliation.drift.patient",
+        "x-delivery-limit": 3
+      }
+    },
+    {
+      "name": "reconciliation.drift.user",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 86400000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.reconciliation.drift.user",
         "x-delivery-limit": 3
       }
     },
@@ -868,6 +981,13 @@
       "arguments": { "x-queue-type": "classic" }
     },
     {
+      "name": "dlq.scheduler.activity.centre_activity_availability",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
       "name": "dlq.activity.routine",
       "vhost": "vhost",
       "durable": true,
@@ -910,7 +1030,28 @@
       "arguments": { "x-queue-type": "classic" }
     },
     {
-      "name": "dlq.reconciliation.drift",
+      "name": "dlq.scheduler.activity.adhoc",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "dlq.reconciliation.drift.activity",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "dlq.reconciliation.drift.patient",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "dlq.reconciliation.drift.user",
       "vhost": "vhost",
       "durable": true,
       "auto_delete": false,
@@ -922,6 +1063,40 @@
       "durable": true,
       "auto_delete": false,
       "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name":"dlq.patient.user",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "patient.user.config.created",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.patient.user",
+        "x-delivery-limit": 3
+      }
+    },
+
+    {
+      "name": "patient.user.config.updated",
+      "vhost": "vhost",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "system.dlx",
+        "x-dead-letter-routing-key": "failed.patient.user",
+        "x-delivery-limit": 3
+      }
     },
     {
       "name": "scheduler.patient.allocation.created",
@@ -1351,6 +1526,30 @@
     {
       "source": "activity.updates",
       "vhost": "vhost",
+      "destination": "scheduler.activity.centre_activity_availability.created",
+      "destination_type": "queue",
+      "routing_key": "activity.centre_activity_availability.created.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.activity.centre_activity_availability.updated",
+      "destination_type": "queue",
+      "routing_key": "activity.centre_activity_availability.updated.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.activity.centre_activity_availability.deleted",
+      "destination_type": "queue",
+      "routing_key": "activity.centre_activity_availability.deleted.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
       "destination": "scheduler.activity.routine.created",
       "destination_type": "queue",
       "routing_key": "activity.routine.created.*",
@@ -1421,11 +1620,67 @@
       "arguments": {}
     },
     {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.activity.adhoc.created",
+      "destination_type": "queue",
+      "routing_key": "activity.adhoc.created.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.activity.adhoc.updated",
+      "destination_type": "queue",
+      "routing_key": "activity.adhoc.updated.*",
+      "arguments": {}
+    },
+    {
+      "source": "activity.updates",
+      "vhost": "vhost",
+      "destination": "scheduler.activity.adhoc.deleted",
+      "destination_type": "queue",
+      "routing_key": "activity.adhoc.deleted.*",
+      "arguments": {}
+    },
+    {
+      "source" : "user.updates",
+      "vhost": "vhost",
+      "destination": "patient.user.config.created",
+      "destination_type": "queue",
+      "routing_key": "patient.user.config.created.*",
+      "arguments": {}
+    },
+    {
+      "source" : "user.updates",
+      "vhost": "vhost",
+      "destination": "patient.user.config.updated",
+      "destination_type": "queue",
+      "routing_key": "patient.user.config.updated.*",
+      "arguments": {}
+    },
+    {
       "source": "reconciliation.events",
       "vhost": "vhost",
-      "destination": "reconciliation.drift.detected",
+      "destination": "reconciliation.drift.activity",
       "destination_type": "queue",
-      "routing_key": "drift.detected.#",
+      "routing_key": "drift.detected.activity.#",
+      "arguments": {}
+    },
+    {
+      "source": "reconciliation.events",
+      "vhost": "vhost",
+      "destination": "reconciliation.drift.patient",
+      "destination_type": "queue",
+      "routing_key": "drift.detected.patient.#",
+      "arguments": {}
+    },
+    {
+      "source": "reconciliation.events",
+      "vhost": "vhost",
+      "destination": "reconciliation.drift.user",
+      "destination_type": "queue",
+      "routing_key": "drift.detected.user.#",
       "arguments": {}
     },
     {
@@ -1526,6 +1781,14 @@
     },
     {
       "source": "system.dlx",
+      "vhost": "vhost",
+      "destination": "dlq.scheduler.activity.centre_activity_availability",
+      "destination_type": "queue",
+      "routing_key": "failed.scheduler.activity.centre_activity_availability",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
       "vhost": "vhost", 
       "destination": "dlq.activity.routine",
       "destination_type": "queue",
@@ -1566,10 +1829,18 @@
     },
     {
       "source": "system.dlx",
-      "vhost": "vhost", 
+      "vhost": "vhost",
       "destination": "dlq.scheduler.activity.recommendation",
       "destination_type": "queue",
       "routing_key": "failed.scheduler.activity.recommendation",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost",
+      "destination": "dlq.scheduler.activity.adhoc",
+      "destination_type": "queue",
+      "routing_key": "failed.scheduler.activity.adhoc",
       "arguments": {}
     },
     {
@@ -1583,9 +1854,33 @@
     {
       "source": "system.dlx",
       "vhost": "vhost",
-      "destination": "dlq.reconciliation.drift",
+      "destination": "dlq.patient.user",
       "destination_type": "queue",
-      "routing_key": "failed.reconciliation.drift",
+      "routing_key": "failed.patient.user",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost",
+      "destination": "dlq.reconciliation.drift.activity",
+      "destination_type": "queue",
+      "routing_key": "failed.reconciliation.drift.activity",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost",
+      "destination": "dlq.reconciliation.drift.patient",
+      "destination_type": "queue",
+      "routing_key": "failed.reconciliation.drift.patient",
+      "arguments": {}
+    },
+    {
+      "source": "system.dlx",
+      "vhost": "vhost",
+      "destination": "dlq.reconciliation.drift.user",
+      "destination_type": "queue",
+      "routing_key": "failed.reconciliation.drift.user",
       "arguments": {}
     }
   ]
